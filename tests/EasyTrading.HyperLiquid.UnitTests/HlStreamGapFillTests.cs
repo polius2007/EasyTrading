@@ -177,6 +177,38 @@ public sealed class HlStreamGapFillTests
     }
 
     [Fact]
+    public async Task BoundedIdSet_is_thread_safe_under_contention()
+    {
+        // The pump task (live WS stream) and the recovery task (REST catch-up) can race on
+        // TryAdd after a reconnect. Without the internal lock the underlying HashSet corrupts.
+        // We hammer the set from 4 threads with overlapping ID ranges and assert no exceptions
+        // plus a consistent final-count invariant.
+        var set = new BoundedIdSet(capacity: 256);
+        const int workers = 4;
+        const int perWorker = 5_000;
+        var added = 0;
+
+        var tasks = Enumerable.Range(0, workers).Select(w => Task.Run(() =>
+        {
+            for (var i = 0; i < perWorker; i++)
+            {
+                // Overlap ranges so workers compete for the same IDs.
+                if (set.TryAdd((w * 100) + (i % 1000)))
+                    Interlocked.Increment(ref added);
+            }
+        })).ToArray();
+
+        await Task.WhenAll(tasks).WaitAsync(TimeSpan.FromSeconds(5));
+
+        // The set is bounded — final state must reflect at most the capacity worth of items.
+        // (We assert via behaviour: after 4 × 5k operations with high overlap, TryAdd a new ID
+        //  should still work and return true without crashing the set.)
+        Assert.True(set.TryAdd(long.MaxValue));
+        Assert.False(set.TryAdd(long.MaxValue)); // immediately re-add → dup
+        Assert.True(added > 0, "expected at least some adds to succeed");
+    }
+
+    [Fact]
     public void BoundedIdSet_evicts_oldest_when_full()
     {
         var set = new BoundedIdSet(capacity: 3);

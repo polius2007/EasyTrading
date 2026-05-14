@@ -131,26 +131,31 @@ internal static class HlStreamGapFill
 
 /// <summary>
 /// Fixed-capacity hash-set for ID dedup. Once full, the oldest entries are evicted in insertion
-/// order. Not thread-safe — gap-fill callbacks serialise via the output channel.
+/// order. Thread-safe via an internal lock — the pump task (live stream) and the recovery task
+/// (REST catch-up) both call <see cref="TryAdd"/> concurrently after a reconnect.
 /// </summary>
 internal sealed class BoundedIdSet(int capacity)
 {
     private readonly HashSet<long> _set = new(capacity);
     private readonly Queue<long> _order = new(capacity);
     private readonly int _capacity = capacity;
+    private readonly object _gate = new();
 
     /// <summary>Add an ID. Returns false if it was already present.</summary>
     public bool TryAdd(long id)
     {
-        if (!_set.Add(id))
-            return false;
-
-        _order.Enqueue(id);
-        if (_set.Count > _capacity)
+        lock (_gate)
         {
-            var evicted = _order.Dequeue();
-            _set.Remove(evicted);
+            if (!_set.Add(id))
+                return false;
+
+            _order.Enqueue(id);
+            if (_set.Count > _capacity)
+            {
+                var evicted = _order.Dequeue();
+                _set.Remove(evicted);
+            }
+            return true;
         }
-        return true;
     }
 }
