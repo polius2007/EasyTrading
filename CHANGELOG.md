@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Phase 7.0 — `EasyTrading.Dydx` scaffold (in tree, not published)
+
+First dYdX v4 work. The scaffold landed under `src/EasyTrading.Dydx/` with
+`<IsPackable>false</IsPackable>` — Markets reads + public WebSocket streams work end-to-end
+against live mainnet. Signed reads (Phase 7.1) and Cosmos SDK transaction signing (Phase 7.2)
+are next; the package goes to NuGet once 7.2 lands.
+
+#### Added — `EasyTrading.Dydx`
+
+- `DydxClient`, `IDydxExchange`, `DydxClientOptions`, `DydxCredentials`, `DydxNetwork`
+  (Mainnet / Testnet), `DydxRetryOptions`.
+- `Markets` — all 10 `IMarkets` methods backed by the v4 Indexer REST
+  (`/perpetualMarkets`, `/orderbooks/perpetualMarket/{ticker}`, `/candles`,
+  `/historicalFunding/{ticker}`, `/trades/perpetualMarket/{ticker}`).
+- `WebSocketClient` — Binance-style multiplex over `wss://indexer.dydx.trade/v4/ws`.
+- `Streams` — public channels (`v4_trades`, `v4_orderbook`, `v4_candles`, `v4_markets`).
+  `BestBidOffer` derived client-side from the orderbook channel.
+- DI: `services.AddEasyTrading().AddDydx(o => o.Network = DydxNetwork.Mainnet)`.
+- Stubs for `Orders`, `Positions`, `Trades`, `Account`, `Transfers`, and user `Streams` —
+  each throws `NotImplementedException` with a Phase 7.1 / 7.2 pointer (or
+  `NotSupportedException` for TWAP / spot ↔ perp transfers which don't exist on dYdX v4).
+
+#### Notes
+
+- dYdX v4 is built on a Cosmos SDK app-chain (CometBFT). Signing for writes is **secp256k1
+  over Cosmos transaction protobufs**, NOT EIP-712 (that was v3 / StarkEx, deprecated).
+  Phase 7.2 will add Cosmos transaction building + validator gRPC broadcast.
+- 11 unit tests + 4 integration tests against live mainnet (`perpetualMarkets`,
+  `orderbooks/BTC-USD`, `allMids`, WebSocket `v4_trades` for BTC-USD) — all green.
+
 ## [1.1.1] — Drop venue prefix from internal types
 
 Internal-only polish. The public surface (`AsterClient`, `HyperLiquidClient`, options, credentials, network enums, builder, interfaces) is unchanged.

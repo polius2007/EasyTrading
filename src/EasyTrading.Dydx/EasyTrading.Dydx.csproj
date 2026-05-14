@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <PackageId>EasyTrading.Dydx</PackageId>
+    <Description>dYdX v4 perpetual DEX client for .NET — Indexer REST + WebSocket + Cosmos SDK transaction signing. Implements EasyTrading.Abstractions for cross-DEX strategies.</Description>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageTags>$(PackageTags);dydx;dydx-v4;cosmos;perp;secp256k1</PackageTags>
+
+    <!-- dYdX scaffold is in tree but not yet ready for NuGet — signed Account/Positions
+         reads (Phase 7.1) and Cosmos-style transaction signing for writes (Phase 7.2) are
+         pending. Flip this back to true and tag a new release once those are in. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\..\assets\icons\dydx.png"
+          Pack="true"
+          PackagePath="\icon.png"
+          Visible="false"
+          Condition="Exists('$(MSBuildThisFileDirectory)..\..\assets\icons\dydx.png')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EasyTrading.Abstractions\EasyTrading.Abstractions.csproj" />
+    <ProjectReference Include="..\EasyTrading.Core\EasyTrading.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="EasyTrading.Dydx.UnitTests" />
+  </ItemGroup>
+
+</Project>
