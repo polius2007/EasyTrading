@@ -122,10 +122,10 @@ internal static class Mapper
     };
 
     /// <summary>
-    /// Hash a GUID-ish trade id down to a stable long for the cross-DEX <see cref="PublicTrade.TradeId"/>.
-    /// We use FNV-1a 64 — fast, deterministic, no allocations, low collision rate for short strings.
+    /// Hash a GUID-ish trade / order id down to a stable long for cross-DEX shapes that need
+    /// a numeric id. FNV-1a 64 — fast, deterministic, low collision rate for short strings.
     /// </summary>
-    private static long StableLongFromString(string s)
+    public static long StableLongFromString(string s)
     {
         const ulong fnvOffset = 14695981039346656037UL;
         const ulong fnvPrime  = 1099511628211UL;
@@ -136,5 +136,123 @@ internal static class Mapper
             hash *= fnvPrime;
         }
         return unchecked((long)hash);
+    }
+
+    // ─── account / position / fill / order mapping ──────────────────────────
+
+    public static OrderSide ParseSide(string s) => string.Equals(s, "BUY", StringComparison.OrdinalIgnoreCase)
+        ? OrderSide.Buy : OrderSide.Sell;
+
+    public static OrderStatus ParseOrderStatus(string s) => s.ToUpperInvariant() switch
+    {
+        "OPEN"                 => OrderStatus.Open,
+        "BEST_EFFORT_OPENED"   => OrderStatus.Pending,
+        "FILLED"               => OrderStatus.Filled,
+        "PARTIALLY_FILLED"     => OrderStatus.PartiallyFilled,
+        "CANCELED" or "CANCELLED" or "BEST_EFFORT_CANCELED"
+                               => OrderStatus.Cancelled,
+        "UNTRIGGERED"          => OrderStatus.Pending,
+        _                      => OrderStatus.Open,
+    };
+
+    public static OrderType ParseOrderType(string s) => s.ToUpperInvariant() switch
+    {
+        "LIMIT"               => OrderType.Limit,
+        "MARKET"              => OrderType.Market,
+        "STOP_LIMIT"          => OrderType.StopLimit,
+        "STOP_MARKET"         => OrderType.StopMarket,
+        "TAKE_PROFIT"         => OrderType.TakeProfit,
+        "TAKE_PROFIT_MARKET"  => OrderType.TakeProfit,
+        "TRAILING_STOP"       => OrderType.StopMarket,
+        _                     => OrderType.Limit,
+    };
+
+    public static TimeInForce ParseTif(string? s) => s?.ToUpperInvariant() switch
+    {
+        "GTT"                 => TimeInForce.Gtc, // dYdX uses GTT (good-till-time) as the default GTC analogue
+        "IOC"                 => TimeInForce.Ioc,
+        "FOK"                 => TimeInForce.Fok,
+        "POST_ONLY"           => TimeInForce.Alo,
+        null                  => TimeInForce.Gtc,
+        _                     => TimeInForce.Gtc,
+    };
+
+    public static Position MapPosition(PerpetualPositionRaw raw)
+    {
+        var signedSize = string.Equals(raw.Side, "LONG", StringComparison.OrdinalIgnoreCase)
+            ? raw.Size
+            : -raw.Size;
+        return new Position(
+            Symbol:           raw.Market,
+            Size:             signedSize,
+            EntryPrice:       raw.EntryPrice,
+            MarkPrice:        0m,   // not in this payload — caller can correlate via /perpetualMarkets
+            UnrealizedPnl:    raw.UnrealizedPnl ?? 0m,
+            RealizedPnl:      raw.RealizedPnl ?? 0m,
+            Leverage:         1,    // dYdX v4 uses subaccount-level margin; per-position leverage isn't surfaced here
+            MarginMode:       MarginMode.Cross,
+            LiquidationPrice: null,
+            Margin:           0m);
+    }
+
+    public static Fill MapFill(UserFillRaw raw) => new(
+        TradeId:       StableLongFromString(raw.Id),
+        OrderId:       raw.OrderId is null ? 0L : StableLongFromString(raw.OrderId),
+        ClientOrderId: null,
+        Symbol:        raw.Market,
+        Side:          ParseSide(raw.Side),
+        Price:         raw.Price,
+        Size:          raw.Size,
+        Fee:           raw.Fee ?? 0m,
+        FeeAsset:      "USDC",
+        IsMaker:       string.Equals(raw.Liquidity, "MAKER", StringComparison.OrdinalIgnoreCase),
+        Time:          ParseIso(raw.CreatedAt));
+
+    public static Order MapOrder(OrderRaw raw)
+    {
+        var updatedAt = raw.UpdatedAt is null ? DateTimeOffset.UtcNow : ParseIso(raw.UpdatedAt);
+        return new Order(
+            OrderId:        StableLongFromString(raw.Id),
+            ClientOrderId:  raw.ClientId,
+            Symbol:         raw.Ticker,
+            Side:           ParseSide(raw.Side),
+            OrderType:      ParseOrderType(raw.Type),
+            Price:          raw.Price > 0 ? raw.Price : null,
+            TriggerPrice:   raw.TriggerPrice > 0 ? raw.TriggerPrice : null,
+            Size:           raw.Size,
+            FilledSize:     raw.TotalFilled ?? 0m,
+            TimeInForce:    ParseTif(raw.TimeInForce),
+            ReduceOnly:     raw.ReduceOnly ?? false,
+            Status:         ParseOrderStatus(raw.Status),
+            CreatedAt:      updatedAt,
+            UpdatedAt:      updatedAt);
+    }
+
+    public static AccountState MapAccount(SubaccountRaw raw)
+    {
+        var positions = new List<Position>();
+        if (raw.OpenPerpetualPositions is not null)
+        {
+            foreach (var (_, p) in raw.OpenPerpetualPositions)
+                positions.Add(MapPosition(p));
+        }
+
+        var balances = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        if (raw.AssetPositions is not null)
+        {
+            foreach (var (_, a) in raw.AssetPositions)
+            {
+                var signed = string.Equals(a.Side, "LONG", StringComparison.OrdinalIgnoreCase) ? a.Size : -a.Size;
+                balances[a.Symbol] = signed;
+            }
+        }
+
+        return new AccountState(
+            AccountValue:      raw.Equity ?? 0m,
+            FreeCollateral:    raw.FreeCollateral ?? 0m,
+            MaintenanceMargin: 0m,
+            Positions:         positions,
+            Balances:          balances,
+            Timestamp:         DateTimeOffset.UtcNow);
     }
 }

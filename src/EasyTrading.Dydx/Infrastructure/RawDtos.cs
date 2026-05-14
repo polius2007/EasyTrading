@@ -84,3 +84,102 @@ internal sealed record FundingEntryRaw(
     [property: JsonPropertyName("rate")] decimal Rate,
     [property: JsonPropertyName("price")] decimal Price,
     [property: JsonPropertyName("effectiveAt")] string EffectiveAt);
+
+// ── /addresses/{address} — subaccount summary ───────────────────────────────
+
+internal sealed record AddressRaw(
+    [property: JsonPropertyName("subaccounts")] IReadOnlyList<SubaccountRaw> Subaccounts,
+    [property: JsonPropertyName("totalTradingRewards")] decimal? TotalTradingRewards);
+
+internal sealed record SubaccountRaw(
+    [property: JsonPropertyName("address")] string Address,
+    [property: JsonPropertyName("subaccountNumber")] int SubaccountNumber,
+    [property: JsonPropertyName("equity")] decimal? Equity,
+    [property: JsonPropertyName("freeCollateral")] decimal? FreeCollateral,
+    [property: JsonPropertyName("marginEnabled")] bool? MarginEnabled,
+    [property: JsonPropertyName("updatedAtHeight")] string? UpdatedAtHeight,
+    [property: JsonPropertyName("latestProcessedBlockHeight")] string? LatestProcessedBlockHeight,
+    [property: JsonPropertyName("openPerpetualPositions")] Dictionary<string, PerpetualPositionRaw>? OpenPerpetualPositions,
+    [property: JsonPropertyName("assetPositions")] Dictionary<string, AssetPositionRaw>? AssetPositions);
+
+// ── /perpetualPositions ─────────────────────────────────────────────────────
+
+internal sealed record PerpetualPositionsRaw(
+    [property: JsonPropertyName("positions")] IReadOnlyList<PerpetualPositionRaw> Positions);
+
+internal sealed record PerpetualPositionRaw(
+    [property: JsonPropertyName("market")] string Market,
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("side")] string Side,
+    [property: JsonPropertyName("size")] decimal Size,
+    [property: JsonPropertyName("maxSize")] decimal? MaxSize,
+    [property: JsonPropertyName("entryPrice")] decimal EntryPrice,
+    [property: JsonPropertyName("realizedPnl")] decimal? RealizedPnl,
+    [property: JsonPropertyName("unrealizedPnl")] decimal? UnrealizedPnl,
+    [property: JsonPropertyName("createdAt")] string? CreatedAt,
+    [property: JsonPropertyName("createdAtHeight")] string? CreatedAtHeight,
+    [property: JsonPropertyName("closedAt")] string? ClosedAt,
+    [property: JsonPropertyName("sumOpen")] decimal? SumOpen,
+    [property: JsonPropertyName("sumClose")] decimal? SumClose,
+    [property: JsonPropertyName("netFunding")] decimal? NetFunding,
+    [property: JsonPropertyName("subaccountNumber")] int? SubaccountNumber);
+
+// ── /assetPositions ─────────────────────────────────────────────────────────
+
+internal sealed record AssetPositionsRaw(
+    [property: JsonPropertyName("positions")] IReadOnlyList<AssetPositionRaw> Positions);
+
+internal sealed record AssetPositionRaw(
+    [property: JsonPropertyName("symbol")] string Symbol,
+    [property: JsonPropertyName("side")] string Side,
+    [property: JsonPropertyName("size")] decimal Size,
+    [property: JsonPropertyName("assetId")] string? AssetId,
+    [property: JsonPropertyName("subaccountNumber")] int? SubaccountNumber);
+
+// ── /fills ──────────────────────────────────────────────────────────────────
+
+internal sealed record FillsRaw(
+    [property: JsonPropertyName("fills")] IReadOnlyList<UserFillRaw> Fills);
+
+internal sealed record UserFillRaw(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("side")] string Side,
+    [property: JsonPropertyName("liquidity")] string? Liquidity,
+    [property: JsonPropertyName("type")] string? Type,
+    [property: JsonPropertyName("market")] string Market,
+    [property: JsonPropertyName("marketType")] string? MarketType,
+    [property: JsonPropertyName("price")] decimal Price,
+    [property: JsonPropertyName("size")] decimal Size,
+    [property: JsonPropertyName("fee")] decimal? Fee,
+    [property: JsonPropertyName("affiliateRevShare")] decimal? AffiliateRevShare,
+    [property: JsonPropertyName("createdAt")] string CreatedAt,
+    [property: JsonPropertyName("createdAtHeight")] string? CreatedAtHeight,
+    [property: JsonPropertyName("orderId")] string? OrderId,
+    [property: JsonPropertyName("clientMetadata")] string? ClientMetadata,
+    [property: JsonPropertyName("subaccountNumber")] int? SubaccountNumber);
+
+// ── /orders ─────────────────────────────────────────────────────────────────
+
+internal sealed record OrderRaw(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("subaccountId")] string? SubaccountId,
+    [property: JsonPropertyName("clientId")] string? ClientId,
+    [property: JsonPropertyName("clobPairId")] string? ClobPairId,
+    [property: JsonPropertyName("side")] string Side,
+    [property: JsonPropertyName("size")] decimal Size,
+    [property: JsonPropertyName("totalFilled")] decimal? TotalFilled,
+    [property: JsonPropertyName("price")] decimal? Price,
+    [property: JsonPropertyName("type")] string Type,
+    [property: JsonPropertyName("reduceOnly")] bool? ReduceOnly,
+    [property: JsonPropertyName("orderFlags")] string? OrderFlags,
+    [property: JsonPropertyName("goodTilBlock")] string? GoodTilBlock,
+    [property: JsonPropertyName("goodTilBlockTime")] string? GoodTilBlockTime,
+    [property: JsonPropertyName("createdAtHeight")] string? CreatedAtHeight,
+    [property: JsonPropertyName("clientMetadata")] string? ClientMetadata,
+    [property: JsonPropertyName("triggerPrice")] decimal? TriggerPrice,
+    [property: JsonPropertyName("timeInForce")] string? TimeInForce,
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("postOnly")] bool? PostOnly,
+    [property: JsonPropertyName("ticker")] string Ticker,
+    [property: JsonPropertyName("updatedAt")] string? UpdatedAt,
+    [property: JsonPropertyName("updatedAtHeight")] string? UpdatedAtHeight);

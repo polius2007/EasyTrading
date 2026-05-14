@@ -51,12 +51,12 @@ public sealed class DydxClient : IDydxExchange
         _ws = new WebSocketClient(_options.GetEffectiveWebSocketUrl(), _options.WebSocketReconnectDelay, _logger);
 
         Markets   = new Markets(rest);
-        Orders    = new Orders();
-        Positions = new Positions();
-        Trades    = new Trades();
-        Account   = new Account();
+        Orders    = new Orders(rest, _options);
+        Positions = new Positions(rest, _options);
+        Trades    = new Trades(rest, _options);
+        Account   = new Account(rest, _options);
         Transfers = new Transfers();
-        Streams   = new Streams(_ws);
+        Streams   = new Streams(_ws, _options);
     }
 
     private static HttpClient CreateHttpClient(DydxClientOptions options)

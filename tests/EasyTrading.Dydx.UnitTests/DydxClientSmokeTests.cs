@@ -58,15 +58,24 @@ public sealed class DydxClientSmokeTests
     }
 
     [Fact]
-    public async Task User_streams_throw_NotImplementedException()
+    public async Task User_streams_without_credentials_raise_AuthenticationException()
     {
         var options = new DydxClientOptions { Network = DydxNetwork.Mainnet };
         await using var client = new DydxClient(options);
 
-        await Assert.ThrowsAsync<NotImplementedException>(async () =>
+        await Assert.ThrowsAsync<AuthenticationException>(async () =>
         {
             await foreach (var _ in client.Streams.MyFillsAsync(default)) { /* never reached */ }
         });
+    }
+
+    [Fact]
+    public async Task Signed_reads_without_credentials_raise_AuthenticationException()
+    {
+        var options = new DydxClientOptions { Network = DydxNetwork.Mainnet };
+        await using var client = new DydxClient(options);
+
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Account.GetStateAsync());
     }
 
     [Fact]

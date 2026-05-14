@@ -11,7 +11,7 @@ namespace EasyTrading.Dydx.Modules;
 /// candles) work over the Indexer WebSocket. User-scoped streams (MyOrders / MyFills / etc.)
 /// require a signed Cosmos transaction context and land in Phase 7.2.
 /// </summary>
-internal sealed class Streams(WebSocketClient ws) : IStreams
+internal sealed class Streams(WebSocketClient ws, DydxClientOptions options) : IStreams
 {
     public IAsyncEnumerable<TradeUpdate> TradesAsync(string symbol, CancellationToken ct)
         => ws.SubscribeAsync<TradeUpdate>(
@@ -75,19 +75,62 @@ internal sealed class Streams(WebSocketClient ws) : IStreams
         }
     }
 
-    // ─── user streams (require signed subaccount path; Phase 7.2) ───────────
+    // ─── user streams (subaccount channel — address-bound, no signing) ──────
 
     public IAsyncEnumerable<OrderUpdate> MyOrdersAsync(CancellationToken ct)
-        => throw new NotImplementedException(Phase.UserStream);
+    {
+        var creds = RequireCreds();
+        var id = $"{creds.Address}/{creds.SubaccountNumber}";
+        return ws.SubscribeAsync<OrderUpdate>(
+            subscribePayload: new { channel = "v4_subaccounts", id },
+            routingKey:       $"v4_subaccounts:{id}",
+            parser:           ParseSubaccountOrders,
+            ct:               ct);
+    }
 
     public IAsyncEnumerable<FillUpdate> MyFillsAsync(CancellationToken ct)
-        => throw new NotImplementedException(Phase.UserStream);
+    {
+        var creds = RequireCreds();
+        var id = $"{creds.Address}/{creds.SubaccountNumber}";
+        return ws.SubscribeAsync<FillUpdate>(
+            subscribePayload: new { channel = "v4_subaccounts", id },
+            routingKey:       $"v4_subaccounts:{id}",
+            parser:           ParseSubaccountFills,
+            ct:               ct);
+    }
 
     public IAsyncEnumerable<FundingUpdate> MyFundingsAsync(CancellationToken ct)
-        => throw new NotImplementedException(Phase.UserStream);
+    {
+        // dYdX surfaces funding settlements via the subaccount channel's `fundingPayments` field
+        // on the periodic snapshot. We surface them as FundingUpdate.
+        var creds = RequireCreds();
+        var id = $"{creds.Address}/{creds.SubaccountNumber}";
+        return ws.SubscribeAsync<FundingUpdate>(
+            subscribePayload: new { channel = "v4_subaccounts", id },
+            routingKey:       $"v4_subaccounts:{id}",
+            parser:           ParseSubaccountFundings,
+            ct:               ct);
+    }
 
     public IAsyncEnumerable<NotificationUpdate> MyNotificationsAsync(CancellationToken ct)
-        => throw new NotImplementedException(Phase.UserStream);
+    {
+        // dYdX doesn't carry a discrete notification event; status of liquidations / margin-calls
+        // is implicit in subaccount updates. Return an empty enumerator so callers can compose.
+        return EmptyAsync(ct);
+    }
+
+    private static async IAsyncEnumerable<NotificationUpdate> EmptyAsync(
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+    {
+        await Task.CompletedTask.ConfigureAwait(false);
+        try { await Task.Delay(Timeout.InfiniteTimeSpan, ct).ConfigureAwait(false); }
+        catch (OperationCanceledException) { /* expected */ }
+        yield break;
+    }
+
+    private DydxCredentials RequireCreds() => options.Credentials
+        ?? throw new AuthenticationException(
+            "DydxClientOptions.Credentials.Address is required for user-scoped streams.");
 
     // ─── parsers (one per channel) ───────────────────────────────────────────
 
@@ -166,6 +209,59 @@ internal sealed class Streams(WebSocketClient ws) : IStreams
             var raw = data.Deserialize<CandleRaw>(JsonOptions.Default);
             if (raw is not null)
                 yield return new CandleUpdate(Mapper.MapCandle(raw));
+        }
+    }
+
+    private static IEnumerable<OrderUpdate> ParseSubaccountOrders(JsonElement data)
+    {
+        // v4_subaccounts contents: { orders?: [...], fills?: [...], subaccount?: {...},
+        //   perpetualPositions?: [...], assetPositions?: [...], fundingPayments?: [...] }.
+        // We yield OrderUpdate entries for every element in `orders`.
+        if (!data.TryGetProperty("orders", out var arr) || arr.ValueKind != JsonValueKind.Array)
+            yield break;
+
+        foreach (var o in arr.EnumerateArray())
+        {
+            var raw = o.Deserialize<OrderRaw>(JsonOptions.Default);
+            if (raw is null) continue;
+            yield return new OrderUpdate(Mapper.MapOrder(raw));
+        }
+    }
+
+    private static IEnumerable<FillUpdate> ParseSubaccountFills(JsonElement data)
+    {
+        if (!data.TryGetProperty("fills", out var arr) || arr.ValueKind != JsonValueKind.Array)
+            yield break;
+
+        foreach (var f in arr.EnumerateArray())
+        {
+            var raw = f.Deserialize<UserFillRaw>(JsonOptions.Default);
+            if (raw is null) continue;
+            yield return new FillUpdate(Mapper.MapFill(raw));
+        }
+    }
+
+    private static IEnumerable<FundingUpdate> ParseSubaccountFundings(JsonElement data)
+    {
+        if (!data.TryGetProperty("fundingPayments", out var arr) || arr.ValueKind != JsonValueKind.Array)
+            yield break;
+
+        foreach (var f in arr.EnumerateArray())
+        {
+            // dYdX funding payment shape (subaccount channel):
+            //   { ticker, payment, rate, oraclePrice, size, side, createdAt, ... }
+            if (!f.TryGetProperty("ticker", out var tEl)) continue;
+            var ticker = tEl.GetString() ?? string.Empty;
+
+            var amount = f.TryGetProperty("payment", out var p) ? p.GetString() : "0";
+            var rate   = f.TryGetProperty("rate", out var r) ? r.GetString() : "0";
+            var time   = f.TryGetProperty("createdAt", out var cEl) ? cEl.GetString() : null;
+
+            yield return new FundingUpdate(
+                Symbol: ticker,
+                Amount: decimal.Parse(amount ?? "0", System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture),
+                Rate:   decimal.Parse(rate ?? "0", System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture),
+                Time:   time is null ? DateTimeOffset.UtcNow : Mapper.ParseIso(time));
         }
     }
 
