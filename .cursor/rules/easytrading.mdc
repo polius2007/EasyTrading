@@ -9,7 +9,7 @@ Multi-DEX trading client for .NET (HyperLiquid live; Aster + dYdX v4 planned). S
 
 ## Status
 
-HyperLiquid is `1.0-rc.1` — production-grade:
+HyperLiquid is `1.0.0` — production-grade:
 - Read endpoints, write endpoints (EIP-712 signed), and WebSocket streams all work end-to-end against live mainnet
 - Pre-flight order validation rejects bad tick / lot / min-notional client-side before sending
 - REST retry policy: 3 attempts, exponential backoff, `Retry-After` honoured

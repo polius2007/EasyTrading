@@ -1,12 +1,18 @@
 # EasyTrading
 
-> Modern, multi-DEX trading client for .NET.
+A .NET client for decentralised perpetual and spot exchanges. The same `IExchangeClient` interface drives every supported DEX; per-DEX packages add only what's venue-specific.
 
-EasyTrading is a unified .NET client for decentralised perpetual and spot exchanges. The same `IExchangeClient` interface drives every supported DEX, so a strategy can switch venues by changing the registration.
+This site is the **API reference**, auto-generated from XML doc-comments on every public type, method, and parameter. For project overview and source see [GitHub](https://github.com/polius2007/EasyTrading).
 
-This site is the **API reference**, auto-generated from the XML doc-comments on every public type, method, and parameter. See the [README on GitHub](https://github.com/polius2007/EasyTrading) for the project overview, roadmap, and quick start.
+## New here?
 
-## Where to start
+| | |
+|---|---|
+| Step-by-step first trade           | [Getting started](https://github.com/polius2007/EasyTrading/blob/main/docs/getting-started.md) |
+| Common patterns (recipes)          | [Recipes](https://github.com/polius2007/EasyTrading/blob/main/docs/recipes.md) |
+| AI / IDE assistant guidance        | [AGENTS.md](https://github.com/polius2007/EasyTrading/blob/main/AGENTS.md) |
+
+## API navigation
 
 | If you want to…                              | Look at                                                                      |
 |----------------------------------------------|------------------------------------------------------------------------------|
@@ -18,13 +24,12 @@ This site is the **API reference**, auto-generated from the XML doc-comments on 
 | Withdraw / transfer / approve agent          | `EasyTrading.Abstractions.ITransfers`, `IAccount.ApproveAgentAsync`          |
 | Subscribe to WebSocket streams               | `EasyTrading.Abstractions.IStreams`                                          |
 | HyperLiquid vaults / staking                 | `EasyTrading.HyperLiquid.IVaults`, `EasyTrading.HyperLiquid.IStaking`        |
+| Configure retries                            | `EasyTrading.HyperLiquid.HyperLiquidRetryOptions`                            |
 | Wire everything up through DI                | `EasyTrading.HyperLiquid.ServiceCollectionExtensions`                        |
 
 ## Status
 
-✅ **`1.0-rc.1` — HyperLiquid is production-grade.** Read, write, and WebSocket streaming all work end-to-end against live mainnet, verified by integration tests. EIP-712 signing for L1 and user-signed actions. Pre-flight order validation (tick / lot / min-notional). REST retry policy with backoff + `Retry-After`. WS gap recovery for user streams. Builder fees are auto-attached and auto-approved on the first order.
-
-Aster and dYdX v4 clients are next.
+`1.0.0` — HyperLiquid is feature-complete and production-grade. Aster and dYdX v4 are next.
 
 ## License
 

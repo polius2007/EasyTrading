@@ -4,7 +4,7 @@ This file tells AI tools (Claude Code, Cursor, GitHub Copilot, Aider, Continue, 
 
 ## What EasyTrading is
 
-EasyTrading is a multi-DEX trading client for .NET. The same `IExchangeClient` interface drives every supported DEX (HyperLiquid is at `1.0-rc`; Aster and dYdX v4 planned), so strategies can switch venues by changing the DI registration only.
+EasyTrading is a multi-DEX trading client for .NET. The same `IExchangeClient` interface drives every supported DEX (HyperLiquid is at `1.0.0`; Aster and dYdX v4 planned), so strategies can switch venues by changing the DI registration only.
 
 - **Home**: [easytrading.pw](https://easytrading.pw)
 - **Source**: [github.com/polius2007/EasyTrading](https://github.com/polius2007/EasyTrading)
@@ -162,6 +162,8 @@ The shared WebSocket lazy-connects on first subscription. Multiple subscribers f
 
 ## Where to find more
 
+- [Getting started](docs/getting-started.md) — step-by-step first trade
+- [Recipes](docs/recipes.md) — common patterns (limit, market, stop, batch, streams, retries, builder fee, hosted service)
 - [API reference](https://easytrading.pw) — auto-generated from XML docs
 - [README](README.md) — project overview and quick start
 - [CHANGELOG](CHANGELOG.md) — phase history and roadmap

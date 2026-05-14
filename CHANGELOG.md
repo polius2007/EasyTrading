@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] — HyperLiquid stable release
+
+First stable release. HyperLiquid coverage is feature-complete and the public API is now
+frozen under semantic versioning — any incompatible change from here gets a `2.0` bump.
+
+This release is materially identical to `1.0.0-rc.2`: all the hardening work (pre-flight
+order validation, REST retry policy with jitter and `Retry-After`, WebSocket gap recovery
+for user streams) shipped in the rc line and has been exercised in shakedown. The `1.0.0`
+tag flips the surface to "stable" and adds documentation polish.
+
+### Documentation
+
+- **`docs/getting-started.md`** — guided first-trade walk-through covering install,
+  agent-wallet setup, testnet-first guidance, and shutdown.
+- **`docs/recipes.md`** — common patterns: limit / market / stop, batch place + cancel,
+  modify, account reads, leverage, transfers, public + user streams, custom retry policy,
+  builder-fee routing, cross-DEX strategies, hosted services.
+- README rewritten to a more factual register; links to the new docs.
+- `docs/index.md` (DocFX landing page) updated; `llms.txt` regenerated for AI crawlers.
+
+### Tests
+
+89 unit + 5 integration tests, all green on `net8.0` and `net9.0`.
+
 ## [1.0.0-rc.2] — Concurrency fix in gap recovery + sample refresh
 
 `1.0.0-rc.1` was tagged but never reached NuGet (the release pipeline's push step was

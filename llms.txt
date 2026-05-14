@@ -1,25 +1,26 @@
 # EasyTrading
 
-> Modern, multi-DEX trading client for .NET. HyperLiquid first, then Aster and dYdX v4. One `IExchangeClient` interface drives every DEX; methods grouped by entity (Markets, Orders, Positions, Trades, Account, Transfers, Streams).
+> A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClient` interface across every supported DEX. HyperLiquid is at `1.0.0`; Aster and dYdX v4 are planned. Methods grouped by entity (Markets, Orders, Positions, Trades, Account, Transfers, Streams). `decimal` for money; `IAsyncEnumerable<T>` for streams; typed exceptions.
 
 ## Documentation
 
-- [README](https://github.com/polius2007/EasyTrading/blob/main/README.md): Project overview, install, quick start, roadmap
+- [README](https://github.com/polius2007/EasyTrading/blob/main/README.md): Project overview, install, quick start, status
+- [Getting started](https://github.com/polius2007/EasyTrading/blob/main/docs/getting-started.md): Step-by-step first trade — install, auth, testnet, mainnet
+- [Recipes](https://github.com/polius2007/EasyTrading/blob/main/docs/recipes.md): Common patterns (limit, market, stop, batch, modify, streams, retry, builder fee, hosted service)
 - [API reference](https://easytrading.pw): Auto-generated DocFX site from XML doc-comments
-- [AGENTS.md](https://github.com/polius2007/EasyTrading/blob/main/AGENTS.md): Patterns, conventions, common snippets, and anti-patterns
-- [CLAUDE.md](https://github.com/polius2007/EasyTrading/blob/main/CLAUDE.md): Claude Code repo layout and contributor notes
+- [AGENTS.md](https://github.com/polius2007/EasyTrading/blob/main/AGENTS.md): Convention summary for AI assistants
 - [CHANGELOG](https://github.com/polius2007/EasyTrading/blob/main/CHANGELOG.md): Phase progress and release history
 
 ## Packages
 
-- [EasyTrading.HyperLiquid](https://www.nuget.org/packages/EasyTrading.HyperLiquid): HyperLiquid client (REST + WebSocket)
-- [EasyTrading.Abstractions](https://www.nuget.org/packages/EasyTrading.Abstractions): Cross-DEX interfaces and models
-- [EasyTrading.Core](https://www.nuget.org/packages/EasyTrading.Core): Shared infrastructure (HTTP, WS, signing helpers)
+- [EasyTrading.HyperLiquid](https://www.nuget.org/packages/EasyTrading.HyperLiquid): HyperLiquid client (REST + WebSocket + EIP-712 signing)
+- [EasyTrading.Abstractions](https://www.nuget.org/packages/EasyTrading.Abstractions): Cross-DEX interfaces and models (no runtime deps)
+- [EasyTrading.Core](https://www.nuget.org/packages/EasyTrading.Core): Shared infrastructure (HTTP, WS, retries, signing helpers)
 
 ## Source
 
-- [GitHub](https://github.com/polius2007/EasyTrading)
+- [GitHub](https://github.com/polius2007/EasyTrading): Source, issues, releases
 
-## Optional
+## Upstream
 
-- [HyperLiquid upstream docs](https://hyperliquid.gitbook.io/hyperliquid-docs): Authoritative reference for HL endpoints, signing, and rate limits
+- [HyperLiquid API docs](https://hyperliquid.gitbook.io/hyperliquid-docs): Authoritative reference for HL endpoints, signing, rate limits
