@@ -7,7 +7,7 @@ A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClie
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 - **Targets:** `net8.0`, `net9.0`
-- **Home:** [easytrading.pw](https://easytrading.pw)
+- **API reference (auto-generated):** [polius2007.github.io/EasyTrading](https://polius2007.github.io/EasyTrading/)
 - **API reference:** auto-generated from XML doc-comments, deployed at the site above
 - **Source:** [github.com/polius2007/EasyTrading](https://github.com/polius2007/EasyTrading)
 
@@ -115,7 +115,7 @@ Methods are grouped by entity. Everything about orders is on `Orders`; everythin
 |---|---|
 | Getting started (tutorial)        | [`docs/getting-started.md`](docs/getting-started.md) |
 | Recipes (common patterns)         | [`docs/recipes.md`](docs/recipes.md)                 |
-| API reference (auto-generated)    | [easytrading.pw](https://easytrading.pw)             |
+| API reference (auto-generated)    | [polius2007.github.io/EasyTrading](https://polius2007.github.io/EasyTrading/) |
 | Changelog                         | [`CHANGELOG.md`](CHANGELOG.md)                       |
 | Contributing                      | [`CONTRIBUTING.md`](CONTRIBUTING.md)                 |
 | Security policy                   | [`SECURITY.md`](SECURITY.md)                         |
@@ -142,4 +142,4 @@ The HyperLiquid client attaches a 0.5 bps (0.005%) builder fee to every order by
 
 ## License
 
-[MIT](LICENSE) © 2026 EasyTrading.pw
+[MIT](LICENSE) © 2026 Elinesoft

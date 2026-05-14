@@ -7,7 +7,7 @@
 - [README](https://github.com/polius2007/EasyTrading/blob/main/README.md): Project overview, install, quick start, status
 - [Getting started](https://github.com/polius2007/EasyTrading/blob/main/docs/getting-started.md): Step-by-step first trade — install, auth, testnet, mainnet
 - [Recipes](https://github.com/polius2007/EasyTrading/blob/main/docs/recipes.md): Common patterns (limit, market, stop, batch, modify, streams, retry, builder fee, hosted service)
-- [API reference](https://easytrading.pw): Auto-generated DocFX site from XML doc-comments
+- [API reference](https://polius2007.github.io/EasyTrading/): Auto-generated DocFX site from XML doc-comments
 - [AGENTS.md](https://github.com/polius2007/EasyTrading/blob/main/AGENTS.md): Convention summary for AI assistants
 - [CHANGELOG](https://github.com/polius2007/EasyTrading/blob/main/CHANGELOG.md): Phase progress and release history
 

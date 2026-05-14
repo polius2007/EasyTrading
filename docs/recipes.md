@@ -1,6 +1,6 @@
 # Recipes
 
-Common patterns when working with EasyTrading. For a guided first-trade walk-through see [getting-started.md](getting-started.md); for API details see [easytrading.pw](https://easytrading.pw).
+Common patterns when working with EasyTrading. For a guided first-trade walk-through see [getting-started.md](getting-started.md); for API details see the [DocFX API reference](https://polius2007.github.io/EasyTrading/).
 
 ## Table of contents
 

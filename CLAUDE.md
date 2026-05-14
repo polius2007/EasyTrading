@@ -11,7 +11,7 @@ This file is read automatically by Claude Code when working in this repository. 
 - `tests/EasyTrading.HyperLiquid.UnitTests/` — HL unit + integration tests (xUnit + NSubstitute)
 - `tests/EasyTrading.Aster.UnitTests/` — Aster unit + integration tests (xUnit)
 - `samples/EasyTrading.Samples.Console/` — usage demo
-- `docs/` — DocFX site (deploys to https://easytrading.pw via the `docs.yml` workflow)
+- `docs/` — DocFX site (deploys to https://polius2007.github.io/EasyTrading/ via the `docs.yml` workflow)
 - `.github/workflows/` — `ci.yml` (build + test), `release.yml` (NuGet on tag), `docs.yml` (Pages)
 
 ## Phases

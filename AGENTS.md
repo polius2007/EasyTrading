@@ -6,7 +6,7 @@ This file tells AI tools (Claude Code, Cursor, GitHub Copilot, Aider, Continue, 
 
 EasyTrading is a multi-DEX trading client for .NET. The same `IExchangeClient` interface drives every supported DEX (HyperLiquid is at `1.0.0`; Aster scaffold + Markets reads landed in `1.1.0-alpha.1`; dYdX v4 planned), so strategies can switch venues by changing the DI registration only.
 
-- **Home**: [easytrading.pw](https://easytrading.pw)
+- **API reference**: [polius2007.github.io/EasyTrading](https://polius2007.github.io/EasyTrading/) (auto-generated DocFX site)
 - **Source**: [github.com/polius2007/EasyTrading](https://github.com/polius2007/EasyTrading)
 - **NuGet**: `EasyTrading.Abstractions`, `EasyTrading.Core`, `EasyTrading.HyperLiquid` (more planned)
 - **License**: MIT
@@ -164,7 +164,7 @@ The shared WebSocket lazy-connects on first subscription. Multiple subscribers f
 
 - [Getting started](docs/getting-started.md) — step-by-step first trade
 - [Recipes](docs/recipes.md) — common patterns (limit, market, stop, batch, streams, retries, builder fee, hosted service)
-- [API reference](https://easytrading.pw) — auto-generated from XML docs
+- [API reference](https://polius2007.github.io/EasyTrading/) — auto-generated from XML docs (DocFX)
 - [README](README.md) — project overview and quick start
 - [CHANGELOG](CHANGELOG.md) — phase history and roadmap
 - [CONTRIBUTING](CONTRIBUTING.md) — how to add a DEX or contribute changes

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] — Canonical EasyTrading mark for infrastructure packages + docs URL fix
+
+### Changed
+
+- **`EasyTrading.Abstractions`** and **`EasyTrading.Core`** now ship with the canonical
+  EasyTrading "ET" project logo (purple bubble + mint ET monogram) instead of the auto-generated
+  approximation from 1.0.2. Same brand asset that lives inside the venue-composite icons.
+- **API reference link** updated from `easytrading.pw` (custom domain, not currently mapped)
+  to the actual DocFX deployment at <https://polius2007.github.io/EasyTrading/>. All references
+  in `README.md`, `docs/index.md`, `docs/getting-started.md`, `docs/recipes.md`, `AGENTS.md`,
+  `CLAUDE.md`, and `llms.txt` updated. Once the custom domain is wired through GitHub Pages,
+  switching back is a one-line README change.
+- `docs/index.md` status block bumped to reflect 1.0.x and Phase 6.0 Aster scaffold.
+
+No code changes; build clean, tests still 98/98 green.
+
 ## [1.0.2] — NuGet metadata polish (Authors, ProjectUrl, per-package tags + icons)
 
 Tightens up every package's NuGet listing so each one is independently discoverable and

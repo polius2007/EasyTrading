@@ -29,7 +29,7 @@ This site is the **API reference**, auto-generated from XML doc-comments on ever
 
 ## Status
 
-`1.0.0` — HyperLiquid is feature-complete and production-grade. Aster and dYdX v4 are next.
+`1.0.2` (NuGet) — HyperLiquid is feature-complete and production-grade. Aster scaffold is in tree (Phase 6.0 — Markets reads against live mainnet; signed reads, writes via EIP-712, and WebSocket pending). dYdX v4 planned.
 
 ## License
 

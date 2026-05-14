@@ -143,5 +143,5 @@ When you're confident on testnet, switch `Network = HyperLiquidNetwork.Mainnet` 
 
 - **[Recipes](recipes.md)** — common patterns: market orders, stop-losses, batch operations, cross-DEX strategies, custom retry policies.
 - **[AGENTS.md](../AGENTS.md)** — convention summary; useful even if you're a human reading it.
-- **[API reference](https://easytrading.pw)** — every public type and method with its XML doc.
+- **[API reference](https://polius2007.github.io/EasyTrading/)** — every public type and method with its XML doc (DocFX).
 - **[HyperLiquid API docs](https://hyperliquid.gitbook.io/hyperliquid-docs)** — upstream reference for the venue itself (rate limits, fee schedule, supported actions).
