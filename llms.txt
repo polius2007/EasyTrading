@@ -1,0 +1,26 @@
+# EasyTrading
+
+> Modern, multi-DEX trading client for .NET. HyperLiquid first, then Aster and dYdX v4. One `IExchangeClient` interface drives every DEX; methods grouped by entity (Markets, Orders, Positions, Trades, Account, Transfers, Streams).
+
+## Documentation
+
+- [README](https://github.com/polius2007/EasyTrading/blob/main/README.md): Project overview, install, quick start, roadmap
+- [API reference](https://easytrading.pw): Auto-generated DocFX site from XML doc-comments
+- [AGENTS.md](https://github.com/polius2007/EasyTrading/blob/main/AGENTS.md): Patterns, conventions, common snippets, and anti-patterns
+- [CLAUDE.md](https://github.com/polius2007/EasyTrading/blob/main/CLAUDE.md): Claude Code repo layout and contributor notes
+- [CHANGELOG](https://github.com/polius2007/EasyTrading/blob/main/CHANGELOG.md): Phase progress and release history
+
+## Packages
+
+- [EasyTrading.HyperLiquid](https://www.nuget.org/packages/EasyTrading.HyperLiquid): HyperLiquid client (REST + WebSocket)
+- [EasyTrading.Abstractions](https://www.nuget.org/packages/EasyTrading.Abstractions): Cross-DEX interfaces and models
+- [EasyTrading.Core](https://www.nuget.org/packages/EasyTrading.Core): Shared infrastructure (HTTP, WS, signing helpers)
+- [EasyTrading.Broker](https://www.nuget.org/packages/EasyTrading.Broker): Builder-fee / rebate decorator
+
+## Source
+
+- [GitHub](https://github.com/polius2007/EasyTrading)
+
+## Optional
+
+- [HyperLiquid upstream docs](https://hyperliquid.gitbook.io/hyperliquid-docs): Authoritative reference for HL endpoints, signing, and rate limits

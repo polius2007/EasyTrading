@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <PackageId>EasyTrading.Core</PackageId>
+    <Description>Shared infrastructure for EasyTrading DEX clients — HTTP, WebSocket, retries, signing helpers. Internal to the EasyTrading family; usually pulled in transitively.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EasyTrading.Abstractions\EasyTrading.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="Polly" />
+  </ItemGroup>
+
+</Project>

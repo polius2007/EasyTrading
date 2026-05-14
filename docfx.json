@@ -1,0 +1,29 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "files": [ "src/**/*.csproj" ],
+          "exclude": [ "**/bin/**", "**/obj/**" ]
+        }
+      ],
+      "dest": "docs/api"
+    }
+  ],
+  "build": {
+    "content": [
+      { "files": [ "**/*.md", "**/*.yml" ], "src": "docs" }
+    ],
+    "resource": [
+      { "files": [ "images/**" ], "src": "docs" }
+    ],
+    "output": "_site",
+    "globalMetadata": {
+      "_appTitle": "EasyTrading",
+      "_appName": "EasyTrading",
+      "_appFooter": "Copyright © 2026 EasyTrading. MIT License.",
+      "_enableSearch": true
+    },
+    "template": [ "default", "modern" ]
+  }
+}

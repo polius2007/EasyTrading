@@ -1,0 +1,58 @@
+---
+description: EasyTrading library conventions and usage patterns
+alwaysApply: true
+---
+
+# EasyTrading
+
+Multi-DEX trading client for .NET (HyperLiquid + Aster + dYdX v4). See `AGENTS.md` for full guidance.
+
+## Core rules
+
+- `decimal` for all money values; never `double` / `float`
+- `Async` suffix on every async method; `CancellationToken ct = default` last parameter
+- Methods grouped by entity: `Orders`, `Positions`, `Markets`, `Trades`, `Account`, `Transfers`, `Streams`, plus HL-only `Vaults` / `Staking` / `Builder`
+- WebSocket streams use `IAsyncEnumerable<T>` with `await foreach`
+- Check `client.Capabilities.HasFlag(ExchangeCapabilities.X)` before calling optional features
+- Typed exceptions: `RateLimitException`, `InsufficientFundsException`, `InvalidOrderException`, `AuthenticationException`, `SigningException`
+- `from` / `to` for time-range parameters
+
+## HyperLiquid specifics
+
+- Prefer agent wallets to the master private key — call `IAccount.ApproveAgentAsync(...)` once, then use the agent's key for trading
+- Builder fees / rebates are managed via `IBuilder` and applied automatically by `EasyTrading.Broker`
+- Network: `HyperLiquidNetwork.Mainnet` or `.Testnet`
+
+## DI registration
+
+```csharp
+services.AddEasyTrading()
+        .AddHyperLiquid(o =>
+        {
+            o.Network     = HyperLiquidNetwork.Mainnet;
+            o.Credentials = new HyperLiquidCredentials("0xMaster", privKey, agentName: "my-bot");
+        });
+```
+
+Inject `IHyperLiquidExchange` (HL-specific surface) or `IExchangeClient` (cross-DEX).
+
+## Common operations
+
+```csharp
+// Market data
+var mids = await ex.Markets.GetAllMidsAsync(ct);
+var book = await ex.Markets.GetOrderBookAsync("BTC", depth: 10, ct);
+
+// Trading
+await ex.Orders.PlaceLimitAsync("BTC", OrderSide.Buy, price: 60_000m, size: 0.01m, tif: TimeInForce.Alo, ct: ct);
+await ex.Positions.SetLeverageAsync("BTC", 10, MarginMode.Cross, ct);
+await ex.Positions.CloseAsync("BTC", ct);
+
+// Streams
+await foreach (var fill in ex.Streams.MyFillsAsync(ct))
+    Console.WriteLine($"{fill.Symbol} {fill.Side} {fill.Size} @ {fill.Price}");
+```
+
+## Phase awareness
+
+Phase 1 (current): scaffolding — all methods throw `NotImplementedException`. Real implementations land in Phase 2+. Don't worry if calls fail in test code — that's expected for the current snapshot. See `CHANGELOG.md`.

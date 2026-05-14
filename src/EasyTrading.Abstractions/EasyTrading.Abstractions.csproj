@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <PackageId>EasyTrading.Abstractions</PackageId>
+    <Description>Cross-DEX trading abstractions — interfaces and models used by every EasyTrading exchange client (HyperLiquid, Aster, dYdX). Pure contracts, no runtime dependencies.</Description>
+  </PropertyGroup>
+
+</Project>
