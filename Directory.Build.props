@@ -15,12 +15,14 @@
       Suppressed warnings:
         CS1591 — missing XML doc: relaxed while public surface is being filled in.
         CA1716 — parameter name conflicts with a reserved keyword in another CLR language (e.g. VB). We use plain English names like `from` / `to` regardless.
+        CA1848 — "use LoggerMessage delegates": not worth the ceremony in a library that only logs on rare events (reconnect, parse failure).
+        CA1873 — "argument may be expensive when logging is disabled": same rationale.
     -->
-    <NoWarn>$(NoWarn);CS1591;CA1716</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;CA1716;CA1848;CA1873</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Label="Package metadata" Condition="'$(IsPackable)' != 'false'">
-    <Version>0.3.2-alpha.1</Version>
+    <Version>0.4.0-alpha.1</Version>
     <Authors>EasyTrading.pw</Authors>
     <Company>EasyTrading.pw</Company>
     <Copyright>Copyright (c) $([System.DateTime]::UtcNow.Year) EasyTrading.pw</Copyright>

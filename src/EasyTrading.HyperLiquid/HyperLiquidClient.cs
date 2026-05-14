@@ -21,16 +21,16 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
     /// <summary>Back-compat alias used by stubs that haven't migrated to the newer constant name yet.</summary>
     internal const string WriteOpPhase3Message = WriteOpPhase31Message;
 
-    /// <summary>Message used by streaming methods, which land in Phase 4 (WebSocket).</summary>
+    /// <summary>Back-compat alias retained for any reference to the Phase-4 stream message.</summary>
     internal const string StreamPhase4Message =
-        "HyperLiquid WebSocket streaming lands in Phase 4. "
-        + "See https://github.com/polius2007/EasyTrading/blob/main/CHANGELOG.md";
+        "HyperLiquid WebSocket streaming is in active development; see CHANGELOG for status.";
 
     private readonly HyperLiquidClientOptions _options;
     private readonly ILogger<HyperLiquidClient> _logger;
     private readonly HttpClient _http;
     private readonly bool _ownsHttp;
     private readonly HlMetaCache _metaCache;
+    private readonly HlWebSocketClient _ws;
 
     /// <summary>Construct a HyperLiquid client with explicit options. Creates an internal <see cref="HttpClient"/>.</summary>
     public HyperLiquidClient(HyperLiquidClientOptions options, ILogger<HyperLiquidClient>? logger = null)
@@ -64,6 +64,7 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
         var nonce = new HlNonce();
         var exchange = new HlExchangeClient(_http, _options, nonce);
         _metaCache = new HlMetaCache(info);
+        _ws = new HlWebSocketClient(_options, _logger);
 
         Markets   = new HlMarkets(info);
         Orders    = new HlOrders(info, exchange, _metaCache, _options);
@@ -71,7 +72,7 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
         Trades    = new HlTrades(info, _options);
         Account   = new HlAccount(info, exchange, _options);
         Transfers = new HlTransfers(exchange, _options);
-        Streams   = new HlStreams();
+        Streams   = new HlStreams(_ws, _options);
         Vaults    = new HlVaults(info, exchange, _options);
         Staking   = new HlStaking(info, exchange, _options);
     }
@@ -121,12 +122,11 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
     public IStaking Staking { get; }
 
     /// <inheritdoc />
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
+        await _ws.DisposeAsync().ConfigureAwait(false);
         _metaCache.Dispose();
         if (_ownsHttp)
             _http.Dispose();
-
-        return ValueTask.CompletedTask;
     }
 }

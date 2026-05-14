@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0-alpha.1] — Phase 4: HyperLiquid WebSocket streaming
+
+### Added
+- **`HlWebSocketClient`** — single-connection multiplex over `wss://api.hyperliquid.xyz/ws`. Reader loop, send semaphore, per-subscriber `Channel<T>`, key-based dispatch from incoming `{channel, data}` messages, idempotent `DisposeAsync`. Each subscriber gets its own buffered stream.
+- **Reconnect with exponential-ish backoff** capped at 30 s. On reconnect, every active subscription is silently re-sent so consumers don't miss messages after a transient drop.
+- **`HlStreams` — all 9 stream methods implemented** against live `wss://api.hyperliquid.xyz/ws`:
+  - Public: `TradesAsync`, `OrderBookAsync`, `CandlesAsync`, `AllMidsAsync`, `BestBidOfferAsync`.
+  - User-scoped (creds required): `MyOrdersAsync`, `MyFillsAsync`, `MyFundingsAsync`, `MyNotificationsAsync`.
+- Per-channel JSON parsers — typed updates (`TradeUpdate`, `OrderBookUpdate`, `CandleUpdate`, `MidUpdate`, `BboUpdate`, `OrderUpdate`, `FillUpdate`, `FundingUpdate`, `NotificationUpdate`).
+- **2 new integration tests verified end-to-end against HL mainnet**: `AllMids` (8 s) and `Trades(BTC)` (15 s). Both received live messages and parsed cleanly.
+
+### Tests
+- Unit: 59 → 61 (two new smoke tests: public stream enumerators don't throw, user streams without credentials raise `AuthenticationException`).
+- Integration (with `EASYTRADING_INTEGRATION=1`): 3 → 5 (+ AllMids WS, + Trades(BTC) WS).
+
+### Notes
+- Each call to a stream method opens a fresh `Channel<T>` and yields until the supplied `CancellationToken` fires; back-pressure is per-subscriber. The shared WebSocket is lazy-connected on first subscription and stays open across all subscriptions.
+- Two subscribers for the same channel + symbol (e.g. two `TradesAsync("BTC", ct)` callers) share a single HL subscription and each see every message — no duplication on the wire.
+
 ## [0.3.2-alpha.1] — Update default builder address
 
 ### Changed

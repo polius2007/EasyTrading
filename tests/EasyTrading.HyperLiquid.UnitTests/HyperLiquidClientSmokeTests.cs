@@ -104,13 +104,29 @@ public sealed class HyperLiquidClientSmokeTests
     }
 
     [Fact]
-    public void Streaming_methods_throw_NotImplementedException_until_Phase_4()
+    public void Phase_4_public_streams_return_enumerable_without_throwing()
     {
         var client = new HyperLiquidClient(new HyperLiquidClientOptions());
 
-        Assert.Throws<NotImplementedException>(() => client.Streams.TradesAsync("BTC", default));
-        Assert.Throws<NotImplementedException>(() => client.Streams.AllMidsAsync(default));
-        Assert.Throws<NotImplementedException>(() => client.Streams.MyFillsAsync(default));
+        // Public WS streams are async iterators: returning the enumerable is side-effect-free.
+        // The WebSocket connect only happens once the caller starts `await foreach`.
+        Assert.NotNull(client.Streams.TradesAsync("BTC", default));
+        Assert.NotNull(client.Streams.AllMidsAsync(default));
+        Assert.NotNull(client.Streams.OrderBookAsync("BTC", 20, default));
+        Assert.NotNull(client.Streams.BestBidOfferAsync("BTC", default));
+        Assert.NotNull(client.Streams.CandlesAsync("BTC", Interval.OneMinute, default));
+    }
+
+    [Fact]
+    public void Phase_4_user_streams_without_credentials_throw_AuthenticationException()
+    {
+        var client = new HyperLiquidClient(new HyperLiquidClientOptions());
+
+        // User-scoped streams check creds synchronously before returning the enumerable.
+        Assert.Throws<AuthenticationException>(() => client.Streams.MyOrdersAsync(default));
+        Assert.Throws<AuthenticationException>(() => client.Streams.MyFillsAsync(default));
+        Assert.Throws<AuthenticationException>(() => client.Streams.MyFundingsAsync(default));
+        Assert.Throws<AuthenticationException>(() => client.Streams.MyNotificationsAsync(default));
     }
 
     [Fact]

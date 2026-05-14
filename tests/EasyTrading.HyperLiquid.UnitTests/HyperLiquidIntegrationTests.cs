@@ -1,10 +1,11 @@
+using EasyTrading.Abstractions.Models;
 using EasyTrading.HyperLiquid;
 
 namespace EasyTrading.HyperLiquid.UnitTests;
 
 /// <summary>
-/// End-to-end smoke tests that hit the live HyperLiquid mainnet REST endpoint. Read-only — no
-/// credentials needed. Skipped by default; set the env var <c>EASYTRADING_INTEGRATION=1</c> to run.
+/// End-to-end smoke tests that hit live HyperLiquid mainnet. Read-only — no credentials needed.
+/// Skipped by default; set <c>EASYTRADING_INTEGRATION=1</c> to run.
 /// </summary>
 public sealed class HyperLiquidIntegrationTests
 {
@@ -66,5 +67,72 @@ public sealed class HyperLiquidIntegrationTests
         Assert.NotEmpty(book.Bids);
         Assert.NotEmpty(book.Asks);
         Assert.True(book.Asks[0].Price > book.Bids[0].Price, "Best ask should be above best bid.");
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task WebSocket_AllMids_receives_live_updates()
+    {
+        if (!IntegrationEnabled)
+            return;
+
+        await using var client = new HyperLiquidClient(new HyperLiquidClientOptions
+        {
+            Network = HyperLiquidNetwork.Mainnet,
+        });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+        var seen = new List<MidUpdate>();
+
+        try
+        {
+            await foreach (var mid in client.Streams.AllMidsAsync(cts.Token))
+            {
+                seen.Add(mid);
+                if (seen.Count >= 10) break; // got enough, exit early
+            }
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            // expected timeout — what we got in `seen` is what we assert on
+        }
+
+        Assert.True(seen.Count > 0, "Expected at least one MidUpdate from the WebSocket stream.");
+        Assert.Contains(seen, m => !string.IsNullOrEmpty(m.Symbol) && m.Mid > 0);
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task WebSocket_Trades_for_BTC_receives_live_updates()
+    {
+        if (!IntegrationEnabled)
+            return;
+
+        await using var client = new HyperLiquidClient(new HyperLiquidClientOptions
+        {
+            Network = HyperLiquidNetwork.Mainnet,
+        });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var seen = new List<TradeUpdate>();
+
+        try
+        {
+            await foreach (var trade in client.Streams.TradesAsync("BTC", cts.Token))
+            {
+                seen.Add(trade);
+                if (seen.Count >= 3) break;
+            }
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            // expected
+        }
+
+        Assert.True(seen.Count > 0,
+            $"Expected at least one trade for BTC within 15s; got {seen.Count}. "
+            + "BTC trades on HyperLiquid are very frequent — failure usually means WS isn't subscribed correctly.");
+        Assert.All(seen, t => Assert.Equal("BTC", t.Trade.Symbol));
+        Assert.All(seen, t => Assert.True(t.Trade.Price > 0));
     }
 }
