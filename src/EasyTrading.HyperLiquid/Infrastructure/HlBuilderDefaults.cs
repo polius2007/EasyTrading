@@ -12,7 +12,7 @@ namespace EasyTrading.HyperLiquid.Infrastructure;
 internal static class HlBuilderDefaults
 {
     /// <summary>Default builder address (recipient of fees).</summary>
-    public const string BuilderAddress = "0xf506A4444b69E07cB55eD5D05Bdde491753d19f2";
+    public const string BuilderAddress = "0xc6B9AC3E4Be8911e00B649BE96d02317Dd61ff89";
 
     /// <summary>Default builder fee rate as a fraction of notional (0.00005m = 0.5 bps = 0.005%).</summary>
     public const decimal FeeRate = 0.00005m;

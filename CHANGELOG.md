@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2-alpha.1] — Update default builder address
+
+### Changed
+- `HlBuilderDefaults.BuilderAddress` updated from `0xf506…19f2` to `0xc6B9AC3E4Be8911e00B649BE96d02317Dd61ff89` — the new EasyTrading.pw revenue address. Builder-fee routing target only; everything else unchanged.
+
 ## [0.3.1-alpha.1] — Phase 3.1: complete HyperLiquid Exchange write surface
 
 ### Added — all remaining write methods now hit the real Exchange endpoint
