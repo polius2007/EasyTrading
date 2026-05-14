@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-rc.2] — Concurrency fix in gap recovery + sample refresh
+
+`1.0.0-rc.1` was tagged but never reached NuGet (the release pipeline's push step was
+silently skipped due to a missing `NUGET_API_KEY` repo secret). This release contains
+the same hardening surface plus a concurrency fix discovered while preparing the
+shakedown.
+
+### Fixed
+
+- **`HlStreamGapFill.BoundedIdSet` was not thread-safe.** After a WebSocket reconnect,
+  the pump task (forwarding live events) and the recovery task (REST catch-up) both
+  call `TryAdd` from separate `Task.Run` contexts; the underlying `HashSet<long>` and
+  `Queue<long>` are not thread-safe and could corrupt under contention. Now serialised
+  by an internal lock. Added a regression test that hammers the set from 4 threads
+  with overlapping ID ranges.
+
+### Changed
+
+- **Sample console** (`samples/EasyTrading.Samples.Console/Program.cs`) refreshed to
+  demonstrate the 1.0-rc.x surface: `RetryPolicy` configuration, pre-flight validation
+  rejecting $1 notional + bad price decimals before the network call, ready-to-uncomment
+  write / stream blocks. Verified end-to-end against live mainnet (564 markets, BTC
+  mid + book live, validation messages precise).
+
+### Tests
+
+- 88 → 89 (+1 thread-safety regression test).
+
 ## [1.0.0-rc.1] — Phase 5: hardening for 1.0
 
 This release closes the production-readiness gaps identified in the post-Phase-4 audit:
