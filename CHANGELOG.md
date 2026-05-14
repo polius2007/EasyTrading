@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.1] — Phase 2: HyperLiquid Info endpoint (read-only)
+
+### Added
+- HTTP infrastructure: `HlInfoClient` wraps `POST /info` with typed and raw JSON variants; shared `HlJsonOptions` handles HyperLiquid's case-sensitive (`t` vs `T`) and string-numeric fields via `NumberHandling.AllowReadingFromString`.
+- 30+ raw DTOs covering every consumed Info response: `meta`, `metaAndAssetCtxs`, `spotMeta`, `l2Book`, `candleSnapshot`, `allMids`, `clearinghouseState`, `spotClearinghouseState`, `openOrders`, `frontendOpenOrders`, `orderStatus`, `historicalOrders`, `userFills`, `userFillsByTime`, `fundingHistory`, `userFees`, `userRateLimit`, `portfolio`, `subAccounts`, `vaultDetails`, `userVaultEquities`, `delegations`, `delegatorSummary`, `delegatorRewards`, `userTwapSliceFills`, `maxBuilderFee`.
+- `HlMapper` — raw HL DTOs → `EasyTrading.Abstractions.Models` (Symbol, OrderBook, Candle, Position, Order, Fill, AccountState, FundingInfo / FundingRecord, FeeSchedule, RateLimitInfo, SubAccount, Portfolio, VaultDetails / VaultEquity, Delegation / DelegatorSummary / Reward).
+- Real implementations across all read methods:
+  - `HlMarkets`: `GetSymbols`, `GetSymbol`, `GetOrderBook`, `GetCandles`, `GetAllMids`, `GetMid`, `GetFunding`, `GetFundingHistory`, `GetOpenInterest` (`GetRecentTrades` correctly raises `NotSupportedException` — HL exposes this only via WebSocket).
+  - `HlAccount`: `GetState`, `GetBalance(s)`, `GetFees`, `GetPortfolio`, `GetSubAccounts`, `GetRateLimit`.
+  - `HlPositions`: `GetAll`, `Get`.
+  - `HlOrders`: `GetOpen`, `Get`, `GetByClientId`, `GetHistory`, `GetTwapFills`.
+  - `HlTrades`: `GetMyFills`, `GetMyFillsByOrder`.
+  - `HlVaults`: `GetDetails`, `GetMyEquities`.
+  - `HlStaking`: `GetMyDelegations`, `GetMySummary`, `GetMyRewards`.
+  - `HlBuilder`: `GetMaxFee`.
+- 11 mapper unit tests using embedded JSON fixtures patterned after live HL payloads.
+- 3 read-only integration tests against HL mainnet (`GetAllMids`, `GetSymbols`, `GetOrderBook`), gated by `EASYTRADING_INTEGRATION=1` env var so CI stays offline.
+- `InternalsVisibleTo` for the unit-test project (lets tests touch raw DTOs / mapper without exposing them publicly).
+
+### Changed
+- `HyperLiquidClient` now owns an `HttpClient` (created internally or caller-supplied) and disposes it on `DisposeAsync`. Each module receives an `HlInfoClient` plus options.
+- Modules split out of the Phase-1 `HlStubs.cs` into one file per sub-client.
+- Unit-test count: 8 → 38 (+ 3 integration tests).
+
+### Pending
+- Phase 3: Exchange endpoint (`order`, `cancel`, `modify`, `withdraw3`, `usdSend`, `spotSend`, `approveAgent`, `approveBuilderFee`, `vaultTransfer`, `tokenDelegate`, …) with EIP-712 signing. All write methods still raise `NotImplementedException` with a message pointing to this phase.
+- Phase 4: WebSocket streaming.
+- Phase 5: `EasyTrading.Broker` builder-fee decorator.
+
 ## [0.1.0-alpha.1] — Phase 1: scaffolding
 
 ### Added

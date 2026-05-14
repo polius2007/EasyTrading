@@ -20,7 +20,7 @@
   </PropertyGroup>
 
   <PropertyGroup Label="Package metadata" Condition="'$(IsPackable)' != 'false'">
-    <Version>0.1.0-alpha.1</Version>
+    <Version>0.2.0-alpha.1</Version>
     <Authors>EasyTrading.pw</Authors>
     <Company>EasyTrading.pw</Company>
     <Copyright>Copyright (c) $([System.DateTime]::UtcNow.Year) EasyTrading.pw</Copyright>

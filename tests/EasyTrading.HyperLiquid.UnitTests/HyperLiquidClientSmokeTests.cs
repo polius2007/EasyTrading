@@ -66,13 +66,43 @@ public sealed class HyperLiquidClientSmokeTests
     }
 
     [Fact]
-    public async Task Phase_1_stub_methods_throw_NotImplementedException()
+    public async Task Write_operations_still_throw_NotImplementedException_in_Phase_2()
     {
         var client = new HyperLiquidClient(new HyperLiquidClientOptions());
 
-        await Assert.ThrowsAsync<NotImplementedException>(() => client.Markets.GetAllMidsAsync());
-        await Assert.ThrowsAsync<NotImplementedException>(() => client.Account.GetStateAsync());
         await Assert.ThrowsAsync<NotImplementedException>(() => client.Orders.CancelAllAsync());
+        await Assert.ThrowsAsync<NotImplementedException>(() => client.Positions.SetLeverageAsync("BTC", 10, MarginMode.Cross));
+        await Assert.ThrowsAsync<NotImplementedException>(() => client.Transfers.SpotToPerpAsync(100m));
+    }
+
+    [Fact]
+    public async Task User_state_queries_without_credentials_throw_AuthenticationException()
+    {
+        var client = new HyperLiquidClient(new HyperLiquidClientOptions());
+
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Account.GetStateAsync());
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Positions.GetAllAsync());
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Orders.GetOpenAsync());
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Trades.GetMyFillsAsync());
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Staking.GetMyDelegationsAsync());
+    }
+
+    [Fact]
+    public void Streaming_methods_throw_NotImplementedException_until_Phase_4()
+    {
+        var client = new HyperLiquidClient(new HyperLiquidClientOptions());
+
+        Assert.Throws<NotImplementedException>(() => client.Streams.TradesAsync("BTC", default));
+        Assert.Throws<NotImplementedException>(() => client.Streams.AllMidsAsync(default));
+        Assert.Throws<NotImplementedException>(() => client.Streams.MyFillsAsync(default));
+    }
+
+    [Fact]
+    public async Task GetRecentTrades_is_unsupported_on_HL_REST()
+    {
+        var client = new HyperLiquidClient(new HyperLiquidClientOptions());
+
+        await Assert.ThrowsAsync<NotSupportedException>(() => client.Markets.GetRecentTradesAsync("BTC"));
     }
 
     [Fact]
