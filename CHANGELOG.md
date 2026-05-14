@@ -7,7 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.0-alpha.1] — Aster scaffold (Phase 6.0) + IEasyTradingBuilder moved to Abstractions
+## [1.0.1] — Package icons + small polish
+
+`EasyTrading.HyperLiquid` and (forthcoming) `EasyTrading.Aster` now ship with a custom NuGet
+icon. The icons live in `assets/icons/` and are referenced from each venue's csproj via
+`<PackageIcon>icon.png</PackageIcon>`. The composite shows the venue logo next to a small
+EasyTrading "ET" badge — purely a third-party-integration mark, no claim on the venue's
+trademark.
+
+### Changed
+
+- `EasyTrading.Aster` is now marked `<IsPackable>false</IsPackable>` until Phase 6.2 lands —
+  the scaffold lives in the source tree and on `main` for development, but the half-implemented
+  Aster client doesn't reach NuGet until the write surface is in. (The 1.1.0-alpha.1 entry below
+  was never published to NuGet — only tagged for the in-tree Aster scaffold work.)
+- `IEasyTradingBuilder` and `AddEasyTrading()` moved to `EasyTrading.Abstractions` (same move
+  described under 1.1.0-alpha.1). Callers may need to add `using EasyTrading.Abstractions;`.
+
+## [1.1.0-alpha.1] — Aster scaffold (Phase 6.0) — internal, never published
+
+The Aster scaffold landed under this tag for the development branch only. It was never
+published to NuGet; the version label has been retired in favour of the 1.0.x line until Phase 6
+is feature-complete, at which point Aster will publish as `1.1.0`.
+
+### Added — `EasyTrading.Aster` (not published)
 
 This release lands the **EasyTrading.Aster** scaffold. The Markets read surface works end-to-end
 against Aster Finance live mainnet (exchangeInfo, depth, ticker price, premiumIndex,

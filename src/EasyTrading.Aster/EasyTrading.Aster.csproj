@@ -5,6 +5,11 @@
     <PackageId>EasyTrading.Aster</PackageId>
     <Description>Aster (asterdex.com) perpetual DEX client for .NET — REST V3 and WebSocket. Implements EasyTrading.Abstractions for cross-DEX strategies.</Description>
     <PackageIcon>icon.png</PackageIcon>
+
+    <!-- Aster scaffold is in tree but not yet ready for NuGet — signed reads, writes (EIP-712),
+         and WebSocket streams are pending (Phases 6.1–6.3). Flip this back to true and tag a new
+         release once those are in. -->
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
