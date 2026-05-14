@@ -4,7 +4,16 @@
     <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <PackageId>EasyTrading.Aster</PackageId>
     <Description>Aster (asterdex.com) perpetual DEX client for .NET — REST V3 and WebSocket. Implements EasyTrading.Abstractions for cross-DEX strategies.</Description>
+    <PackageIcon>icon.png</PackageIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\..\assets\icons\aster.png"
+          Pack="true"
+          PackagePath="\icon.png"
+          Visible="false"
+          Condition="Exists('$(MSBuildThisFileDirectory)..\..\assets\icons\aster.png')" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\EasyTrading.Abstractions\EasyTrading.Abstractions.csproj" />
