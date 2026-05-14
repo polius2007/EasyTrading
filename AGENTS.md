@@ -4,22 +4,32 @@ This file tells AI tools (Claude Code, Cursor, GitHub Copilot, Aider, Continue, 
 
 ## What EasyTrading is
 
-EasyTrading is a multi-DEX trading client for .NET. The same `IExchangeClient` interface drives every supported DEX (HyperLiquid is at `1.0.0`; Aster scaffold + Markets reads landed in `1.1.0-alpha.1`; dYdX v4 planned), so strategies can switch venues by changing the DI registration only.
+EasyTrading is a multi-DEX trading client for .NET. The same `IExchangeClient` interface drives every supported DEX, so strategies can switch venues by changing the DI registration only.
 
 - **API reference**: [polius2007.github.io/EasyTrading](https://polius2007.github.io/EasyTrading/) (auto-generated DocFX site)
 - **Source**: [github.com/polius2007/EasyTrading](https://github.com/polius2007/EasyTrading)
-- **NuGet**: `EasyTrading.Abstractions`, `EasyTrading.Core`, `EasyTrading.HyperLiquid` (more planned)
+- **NuGet**: `EasyTrading.Abstractions`, `EasyTrading.Core`, `EasyTrading.HyperLiquid`, `EasyTrading.Aster` (`EasyTrading.Dydx` in-tree, not yet published)
 - **License**: MIT
 
-## Current status (HyperLiquid)
+## Current status per venue
 
-- Read / write / stream all functional against live HyperLiquid mainnet (verified by integration tests).
-- Signing: EIP-712 L1 (phantom-agent) + user-signed flavours, both implemented.
-- WebSocket: 9 channels with reconnect + per-subscriber back-pressure.
-- **Pre-flight order validation** rejects orders that would fail HL's tick / lot / min-notional rules before they go on the wire. Suggest typed `Orders.Place*` calls; don't pre-validate manually in user code.
-- **REST resilience**: network errors, timeouts, 5xx, and 429 (with `Retry-After`) are retried with exponential backoff + jitter. Configure via `HyperLiquidClientOptions.RetryPolicy` (default: 3 attempts).
-- **WS gap recovery**: user-scoped streams (`MyFills`, `MyOrders`, `MyFundings`) fetch REST catch-up on every reconnect and dedupe against the live feed. Consumers see one unified `IAsyncEnumerable<T>` and don't need to handle reconnects in user code.
-- Builder-fee routing: automatic. Library transparently calls `approveBuilderFee` on first order per trader; subsequent orders carry the `builder` field directly. No setup required for the consumer.
+**HyperLiquid `1.1.1`** — stable. Read / write / stream all functional against live mainnet.
+EIP-712 L1 (phantom-agent) + user-signed flavours. WebSocket: 9 channels with reconnect +
+per-subscriber back-pressure. Pre-flight order validation (tick / lot / min-notional).
+REST retry policy with backoff + jitter and `Retry-After`. WebSocket gap recovery on user
+streams (`MyFills` / `MyOrders` / `MyFundings`) — REST catch-up on each reconnect with
+dedup. Builder-fee routing is automatic; the library calls `approveBuilderFee` once per
+trader transparently.
+
+**Aster Finance `1.1.1`** — stable. Same surface, EIP-712 signing under
+`AsterSignTransaction` v1 / chainId 1666. Pre-flight validator wired to
+`/fapi/v3/exchangeInfo` filters (PRICE_FILTER / LOT_SIZE / MIN_NOTIONAL). WebSocket:
+Binance-style multiplex for market data + a separate listenKey-bound socket for user
+data with 30-min keepalive.
+
+**dYdX v4** — scaffold in tree (`src/EasyTrading.Dydx/`), Markets reads + public
+WebSocket streams against the v4 Indexer work end-to-end. Cosmos SDK transaction signing
+for writes is pending (Phase 7.2). Not yet on NuGet.
 
 ## Core conventions (apply always)
 
@@ -35,23 +45,49 @@ EasyTrading is a multi-DEX trading client for .NET. The same `IExchangeClient` i
 ```csharp
 using EasyTrading.Abstractions;
 using EasyTrading.HyperLiquid;
+using EasyTrading.Aster;
+using EasyTrading.Dydx;
 using Microsoft.Extensions.DependencyInjection;
 
 services.AddEasyTrading()
-        .AddHyperLiquid(opts =>
+        // HyperLiquid — agent-wallet model (one master + one signer per bot).
+        .AddHyperLiquid(o =>
         {
-            opts.Network     = HyperLiquidNetwork.Mainnet;
-            opts.Credentials = new HyperLiquidCredentials(
+            o.Network     = HyperLiquidNetwork.Mainnet;
+            o.Credentials = new HyperLiquidCredentials(
                 masterAddress: "0xYourMasterAddress",
-                privateKey:    Environment.GetEnvironmentVariable("HL_PRIVATE_KEY")!,
+                privateKey:    Environment.GetEnvironmentVariable("HL_AGENT_KEY")!,
                 agentName:     "my-bot");
+        })
+        // Aster — same master/signer split (separate API wallet registered via Aster's UI).
+        .AddAster(o =>
+        {
+            o.Network     = AsterNetwork.Mainnet;
+            o.Credentials = new AsterCredentials(
+                MasterAddress: "0xYourMasterAddress",
+                SignerAddress: "0xYourSignerAddress",
+                PrivateKey:    Environment.GetEnvironmentVariable("ASTER_SIGNER_KEY")!);
+        })
+        // dYdX v4 — Cosmos chain; trade directly with a hot-wallet mnemonic. Reads-only today.
+        .AddDydx(o =>
+        {
+            o.Network     = DydxNetwork.Mainnet;
+            o.Credentials = new DydxCredentials(
+                Address:  "dydx1…",
+                Mnemonic: Environment.GetEnvironmentVariable("DYDX_MNEMONIC")!,
+                SubaccountNumber: 0);
         });
 ```
 
 Then inject:
 
 - `IHyperLiquidExchange` — HL-specific surface (adds `Vaults`, `Staking`)
-- `IExchangeClient` — cross-DEX surface (works for HL today, Aster/dYdX later)
+- `IAsterExchange` — Aster-specific surface (currently identical to `IExchangeClient`)
+- `IDydxExchange` — dYdX-specific surface (currently identical to `IExchangeClient`)
+- `IExchangeClient` — cross-DEX surface for venue-agnostic strategies
+
+When a host registers more than one venue, the cross-DEX clients are exposed via keyed
+DI: `sp.GetRequiredKeyedService<IExchangeClient>("hyperliquid")` / `"aster"` / `"dydx"`.
 
 ## Common patterns
 

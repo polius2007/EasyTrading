@@ -7,9 +7,9 @@ A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClie
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 - **Targets:** `net8.0`, `net9.0`
-- **API reference (auto-generated):** [polius2007.github.io/EasyTrading](https://polius2007.github.io/EasyTrading/)
-- **API reference:** auto-generated from XML doc-comments, deployed at the site above
+- **API reference:** [polius2007.github.io/EasyTrading](https://polius2007.github.io/EasyTrading/) (auto-generated DocFX site)
 - **Source:** [github.com/polius2007/EasyTrading](https://github.com/polius2007/EasyTrading)
+- **License:** MIT — see [LICENSE](LICENSE)
 
 ## Status
 
@@ -19,28 +19,39 @@ A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClie
 | Aster       | `EasyTrading.Aster`                  |     ✅     |    ✅     |   ✅    | `1.1.1`                |
 | dYdX v4     | `EasyTrading.Dydx`                   | reads only |   public  |   wip   | scaffold *(in tree)*   |
 
-HyperLiquid coverage at `1.0.0`:
+Coverage summary:
 
-- All Info (read) and Exchange (write) endpoints, including TWAP, scheduled cancel, sub-accounts, vaults, and staking.
-- EIP-712 L1 and user-signed actions; byte-identical msgpack encoding with the Python reference SDK.
-- WebSocket: 9 channels, per-subscriber back-pressure, automatic reconnect with exponential backoff.
-- Pre-flight order validation (tick / lot / min-notional) — invalid orders are rejected client-side.
-- REST retry policy with backoff + jitter, honours `Retry-After` on 429.
-- WebSocket gap recovery: on reconnect, user streams (`MyFills` / `MyOrders` / `MyFundings`) auto-fetch missed events via REST and deduplicate against the live feed.
-- 89 unit tests + 5 read-only integration tests against live mainnet, all green.
+- **HyperLiquid** is stable. All Info (read) and Exchange (write) endpoints, including TWAP,
+  scheduled cancel, sub-accounts, vaults, and staking. EIP-712 L1 and user-signed actions;
+  byte-identical msgpack encoding with the Python reference SDK. WebSocket: 9 channels,
+  per-subscriber back-pressure, automatic reconnect with exponential backoff. Pre-flight
+  order validation (tick / lot / min-notional). REST retry policy with backoff + jitter,
+  honours `Retry-After` on 429. WebSocket gap recovery: on reconnect, user streams auto-fetch
+  missed events via REST and deduplicate against the live feed.
+- **Aster Finance** is stable. Same surface, EIP-712 signing with `AsterSignTransaction`
+  domain. Pre-flight validator wired to `/fapi/v3/exchangeInfo` filters (PRICE_FILTER /
+  LOT_SIZE / MIN_NOTIONAL). WebSocket: Binance-style multiplex (market + listenKey-bound
+  user streams with 30-min keepalive).
+- **dYdX v4** scaffold — Indexer REST reads + public WebSocket streams work end-to-end
+  against live mainnet. Cosmos SDK transaction signing for writes is pending Phase 7.2.
+
+**Tests:** 125 unit + 14 integration (live mainnet across HL, Aster, dYdX), all green.
 
 ## Install
 
 ```bash
 dotnet add package EasyTrading.HyperLiquid
+# or
+dotnet add package EasyTrading.Aster
 ```
 
-This pulls `EasyTrading.Abstractions` and `EasyTrading.Core` transitively.
+Either pulls `EasyTrading.Abstractions` and `EasyTrading.Core` transitively.
 
 ## Quick start
 
 ```csharp
 using EasyTrading.Abstractions;
+using EasyTrading.Aster;
 using EasyTrading.HyperLiquid;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -49,32 +60,44 @@ var host = Host.CreateApplicationBuilder(args);
 
 host.Services
     .AddEasyTrading()
-    .AddHyperLiquid(options =>
+    .AddHyperLiquid(o =>
     {
-        options.Network = HyperLiquidNetwork.Mainnet;
-        options.Credentials = new HyperLiquidCredentials(
+        o.Network = HyperLiquidNetwork.Mainnet;
+        o.Credentials = new HyperLiquidCredentials(
             masterAddress: "0xYourMasterAddress",
-            privateKey:    Environment.GetEnvironmentVariable("HL_PRIVATE_KEY")!,
+            privateKey:    Environment.GetEnvironmentVariable("HL_AGENT_KEY")!,
             agentName:     "easy-bot");
+    })
+    .AddAster(o =>
+    {
+        o.Network = AsterNetwork.Mainnet;
+        o.Credentials = new AsterCredentials(
+            MasterAddress: "0xYourMasterAddress",
+            SignerAddress: "0xYourSignerAddress",
+            PrivateKey:    Environment.GetEnvironmentVariable("ASTER_SIGNER_KEY")!);
     });
 
 using var app = host.Build();
-var ex = app.Services.GetRequiredService<IHyperLiquidExchange>();
+var hl    = app.Services.GetRequiredService<IHyperLiquidExchange>();
+var aster = app.Services.GetRequiredService<IAsterExchange>();
 
-// Read (no signing needed)
-var mids = await ex.Markets.GetAllMidsAsync();
-var book = await ex.Markets.GetOrderBookAsync("BTC", depth: 20);
+// Read — works without credentials.
+var mids = await hl.Markets.GetAllMidsAsync();
+var book = await aster.Markets.GetOrderBookAsync("BTCUSDT", depth: 20);
 
-// Write (signed)
-var placed = await ex.Orders.PlaceLimitAsync(
+// Write — signed.
+var placed = await hl.Orders.PlaceLimitAsync(
     symbol: "BTC", side: OrderSide.Buy,
     price:  60_000m, size: 0.01m,
     tif:    TimeInForce.Alo);
 
-// Stream
-await foreach (var trade in ex.Streams.TradesAsync("BTC", default))
+// Stream.
+await foreach (var trade in hl.Streams.TradesAsync("BTC", default))
     Console.WriteLine($"{trade.Trade.Price} {trade.Trade.Size}");
 ```
+
+To write a strategy that doesn't care which venue it runs against, inject `IExchangeClient`
+instead of the venue-specific surface — every supported DEX implements the same shape.
 
 A more complete walk-through with credential setup, agent wallets, and testnet-first guidance lives in [`docs/getting-started.md`](docs/getting-started.md). Common patterns are collected in [`docs/recipes.md`](docs/recipes.md).
 

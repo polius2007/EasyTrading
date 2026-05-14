@@ -6,10 +6,12 @@ This file is read automatically by Claude Code when working in this repository. 
 
 - `src/EasyTrading.Abstractions/` — cross-DEX interfaces and models, no runtime deps
 - `src/EasyTrading.Core/` — shared infrastructure (HTTP, WebSocket, signing helpers)
-- `src/EasyTrading.HyperLiquid/` — HyperLiquid client (REST + WebSocket + signing)
-- `src/EasyTrading.Aster/` — Aster client (scaffold + Markets reads landed; signing + WS pending)
+- `src/EasyTrading.HyperLiquid/` — HyperLiquid client (REST + WebSocket + EIP-712 signing) — `1.1.1` on NuGet
+- `src/EasyTrading.Aster/` — Aster client (REST + WebSocket + EIP-712 signing) — `1.1.1` on NuGet
+- `src/EasyTrading.Dydx/` — dYdX v4 client (Indexer REST + public WS); writes via Cosmos SDK pending Phase 7.2 — in tree, not yet packed
 - `tests/EasyTrading.HyperLiquid.UnitTests/` — HL unit + integration tests (xUnit + NSubstitute)
 - `tests/EasyTrading.Aster.UnitTests/` — Aster unit + integration tests (xUnit)
+- `tests/EasyTrading.Dydx.UnitTests/` — dYdX unit + integration tests (xUnit)
 - `samples/EasyTrading.Samples.Console/` — usage demo
 - `docs/` — DocFX site (deploys to https://polius2007.github.io/EasyTrading/ via the `docs.yml` workflow)
 - `.github/workflows/` — `ci.yml` (build + test), `release.yml` (NuGet on tag), `docs.yml` (Pages)
@@ -25,11 +27,10 @@ The library ships in phases. See [CHANGELOG.md](CHANGELOG.md) for the live state
 | 3 | HyperLiquid Exchange endpoint + EIP-712 signing  | ✅     |
 | 4 | HyperLiquid WebSocket streaming                  | ✅     |
 | 5 | Hardening (validation + retry + gap recovery)    | ✅     |
-| 6.0 | Aster scaffold + Markets reads                 | ✅     |
-| 6.1 | Aster signed reads (Account/Positions/Trades)  | ⏳     |
-| 6.2 | Aster Exchange + EIP-712 signing               | ⏳     |
-| 6.3 | Aster WebSocket streaming                      | ⏳     |
-| 7 | dYdX v4 client                                   | ⏳     |
+| 6 | Aster client — full surface (REST + WS + EIP-712) | ✅     |
+| 7.0 | dYdX v4 scaffold + Indexer reads + public WS   | ✅     |
+| 7.1 | dYdX signed Indexer reads (Account/Positions)  | ⏳     |
+| 7.2 | dYdX writes via Cosmos SDK + secp256k1 signing | ⏳     |
 
 ## Coding conventions
 
@@ -70,8 +71,8 @@ The `release.yml` workflow builds, packs, and pushes every `EasyTrading.*` NuGet
 
 When making changes, the bar is:
 - `dotnet build EasyTrading.slnx` — clean (0 warnings, 0 errors, net8.0 + net9.0)
-- `dotnet test EasyTrading.slnx` — all unit tests green (currently 95: 89 HL + 6 Aster smoke)
-- With `EASYTRADING_INTEGRATION=1`, integration tests also green (currently 8: 5 HL + 3 Aster, all live mainnet)
+- `dotnet test EasyTrading.slnx` — all unit tests green (currently 125: 89 HL + 25 Aster + 11 dYdX)
+- With `EASYTRADING_INTEGRATION=1`, integration tests also green (currently 14: 5 HL + 5 Aster + 4 dYdX, all live mainnet)
 
 If a build error is an analyzer warning (CA*/IDE*), the fix is usually to either suppress it in `Directory.Build.props` `<NoWarn>` with a one-line justification, or to refactor minimally. Don't suppress to hide real bugs.
 

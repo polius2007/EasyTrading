@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\EasyTrading.HyperLiquid\EasyTrading.HyperLiquid.csproj" />
+    <ProjectReference Include="..\..\src\EasyTrading.Aster\EasyTrading.Aster.csproj" />
+    <ProjectReference Include="..\..\src\EasyTrading.Dydx\EasyTrading.Dydx.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -4,7 +4,9 @@ This repository builds **EasyTrading**, a multi-DEX trading client for .NET. See
 
 ## Status
 
-HyperLiquid integration is `1.0.0`: read / write (EIP-712-signed) / WebSocket all live against mainnet, with pre-flight order validation, REST retry policy, and WS gap recovery for user streams. Aster and dYdX v4 are next.
+- **HyperLiquid `1.1.1`** — stable. Read / write (EIP-712-signed) / WebSocket all live against mainnet, with pre-flight order validation, REST retry policy, and WS gap recovery for user streams.
+- **Aster `1.1.1`** — stable. EIP-712 `AsterSignTransaction` signing, full REST + WebSocket surface against Aster Finance mainnet.
+- **dYdX v4** — scaffold in tree: Indexer REST reads + public WebSocket; Cosmos SDK transaction signing for writes pending Phase 7.2.
 
 ## Hard rules (apply always)
 

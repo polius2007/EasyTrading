@@ -9,13 +9,13 @@ Multi-DEX trading client for .NET (HyperLiquid live; Aster + dYdX v4 planned). S
 
 ## Status
 
-HyperLiquid is `1.0.0` — production-grade:
-- Read endpoints, write endpoints (EIP-712 signed), and WebSocket streams all work end-to-end against live mainnet
-- Pre-flight order validation rejects bad tick / lot / min-notional client-side before sending
-- REST retry policy: 3 attempts, exponential backoff, `Retry-After` honoured
-- WS gap recovery for user streams (MyFills/MyOrders/MyFundings): REST catch-up on reconnect, deduped
-- Builder-fee routing is automatic (auto-attach + auto-approve on first order)
-- Integration-test verified
+- **HyperLiquid `1.1.1`** — stable. EIP-712 signed reads + writes + WebSocket. Pre-flight order
+  validation, REST retry policy (backoff + jitter + Retry-After), WS gap recovery on user
+  streams, automatic builder-fee routing.
+- **Aster `1.1.1`** — stable. Same surface, EIP-712 `AsterSignTransaction` signing. WebSocket:
+  Binance-style multiplex with listenKey-bound user streams + 30-min keepalive.
+- **dYdX v4** — scaffold in tree (`src/EasyTrading.Dydx/`): Indexer REST reads + public WS work;
+  Cosmos SDK transaction signing for writes pending Phase 7.2. Not yet on NuGet.
 
 ## Core rules
 
