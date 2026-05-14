@@ -3,8 +3,9 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <PackageId>EasyTrading.HyperLiquid</PackageId>
-    <Description>HyperLiquid DEX client for .NET — REST (Info + Exchange) and WebSocket. Implements EasyTrading.Abstractions and adds HyperLiquid-specific surface (vaults, staking, builder fees).</Description>
+    <Description>HyperLiquid DEX client for .NET — REST (Info + Exchange) and WebSocket with EIP-712 signing, pre-flight order validation, REST retry policy, and WebSocket gap recovery for user streams. Implements EasyTrading.Abstractions plus HyperLiquid-specific surface (vaults, staking, builder fees).</Description>
     <PackageIcon>icon.png</PackageIcon>
+    <PackageTags>$(PackageTags);hyperliquid;hl;eip712;perp;arbitrum</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

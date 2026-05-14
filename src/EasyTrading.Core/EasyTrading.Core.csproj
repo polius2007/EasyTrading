@@ -3,8 +3,18 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <PackageId>EasyTrading.Core</PackageId>
-    <Description>Shared infrastructure for EasyTrading DEX clients — HTTP, WebSocket, retries, signing helpers. Internal to the EasyTrading family; usually pulled in transitively.</Description>
+    <Description>Shared infrastructure for EasyTrading DEX clients — HTTP helpers with retry policy, WebSocket management, signing primitives. Pulled in transitively when you install a venue package (EasyTrading.HyperLiquid, EasyTrading.Aster, …).</Description>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageTags>$(PackageTags);core;http;websocket;polly;retry</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\..\assets\icons\core.png"
+          Pack="true"
+          PackagePath="\icon.png"
+          Visible="false"
+          Condition="Exists('$(MSBuildThisFileDirectory)..\..\assets\icons\core.png')" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\EasyTrading.Abstractions\EasyTrading.Abstractions.csproj" />

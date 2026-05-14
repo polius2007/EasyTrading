@@ -22,11 +22,11 @@
   </PropertyGroup>
 
   <PropertyGroup Label="Package metadata" Condition="'$(IsPackable)' != 'false'">
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <PackageReleaseNotes>https://github.com/polius2007/EasyTrading/blob/main/CHANGELOG.md</PackageReleaseNotes>
-    <Authors>EasyTrading.pw</Authors>
-    <Company>EasyTrading.pw</Company>
-    <Copyright>Copyright (c) $([System.DateTime]::UtcNow.Year) EasyTrading.pw</Copyright>
+    <Authors>Elinesoft</Authors>
+    <Company>Elinesoft</Company>
+    <Copyright>Copyright (c) $([System.DateTime]::UtcNow.Year) Elinesoft</Copyright>
     <Product>EasyTrading</Product>
 
     <!--
@@ -34,12 +34,13 @@
     -->
     <GitHubOwner>polius2007</GitHubOwner>
 
-    <PackageProjectUrl>https://easytrading.pw</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/$(GitHubOwner)/EasyTrading</PackageProjectUrl>
     <RepositoryUrl>https://github.com/$(GitHubOwner)/EasyTrading.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>trading;dex;crypto;hyperliquid;dydx;aster;perpetuals;spot;ccxt</PackageTags>
+    <!-- Project-wide tag base; venue packages append their own venue-specific tags below. -->
+    <PackageTags>easytrading;trading;dex;crypto;perpetuals;spot;ccxt;netstandard;dotnet</PackageTags>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>

@@ -3,8 +3,19 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <PackageId>EasyTrading.Abstractions</PackageId>
-    <Description>Cross-DEX trading abstractions — interfaces and models used by every EasyTrading exchange client (HyperLiquid, Aster, dYdX).</Description>
+    <Description>Cross-DEX trading abstractions for .NET — interfaces and models (IExchangeClient, IOrders, IPositions, IMarkets, IStreams, OrderRequest, …) used by every EasyTrading exchange client (HyperLiquid, Aster, dYdX).</Description>
+    <PackageIcon>icon.png</PackageIcon>
+    <!-- Append abstractions-specific tags to the base set in Directory.Build.props. -->
+    <PackageTags>$(PackageTags);abstractions;interfaces;contracts</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\..\assets\icons\abstractions.png"
+          Pack="true"
+          PackagePath="\icon.png"
+          Visible="false"
+          Condition="Exists('$(MSBuildThisFileDirectory)..\..\assets\icons\abstractions.png')" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- AddEasyTrading() lives here so every venue package can chain off IEasyTradingBuilder

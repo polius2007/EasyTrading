@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] — NuGet metadata polish (Authors, ProjectUrl, per-package tags + icons)
+
+Tightens up every package's NuGet listing so each one is independently discoverable and
+visually consistent on nuget.org.
+
+### Changed
+
+- **`Authors`** / **`Company`** changed from `EasyTrading.pw` to `Elinesoft` — the legal entity
+  behind the project. The brand "EasyTrading.pw" is retained as the friendly product name in
+  the package description and on the website.
+- **`PackageProjectUrl`** now points to the GitHub repository
+  (`https://github.com/polius2007/EasyTrading`) rather than the marketing site. Source and
+  releases live there; the docs site (`easytrading.pw`) is still linked from the README and
+  from the auto-generated DocFX deployment.
+- **`PackageTags`** now use a layered approach: a project-wide base set lives in
+  `Directory.Build.props`, and each csproj appends its own venue-specific tags via
+  `$(PackageTags);…`. Examples:
+  - Abstractions → `…;abstractions;interfaces;contracts`
+  - Core → `…;core;http;websocket;polly;retry`
+  - HyperLiquid → `…;hyperliquid;hl;eip712;perp;arbitrum`
+  - Aster (when published) → `…;aster;asterdex;eip712;perp;binance-style`
+- **Per-package icons** — every published package now ships a custom icon. The two
+  infrastructure packages get a clean "ET" monogram (`assets/icons/abstractions.png`,
+  `core.png`); HyperLiquid keeps the venue-composite icon shipped in 1.0.1.
+
+### Tests / verification
+
+- 89 HL + 9 Aster = 98 tests green on `net8.0` + `net9.0`.
+- `dotnet pack` inspection confirms each nupkg has its own `icon.png` at the root and the
+  expected `<authors>`, `<projectUrl>`, `<tags>`, and `<repository>` metadata in `.nuspec`.
+
 ## [1.0.1] — Package icons + small polish
 
 `EasyTrading.HyperLiquid` and (forthcoming) `EasyTrading.Aster` now ship with a custom NuGet
