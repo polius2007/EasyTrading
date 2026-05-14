@@ -7,9 +7,11 @@
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>$(PackageTags);dydx;dydx-v4;cosmos;perp;secp256k1</PackageTags>
 
-    <!-- dYdX scaffold is in tree but not yet ready for NuGet — signed Account/Positions
-         reads (Phase 7.1) and Cosmos-style transaction signing for writes (Phase 7.2) are
-         pending. Flip this back to true and tag a new release once those are in. -->
+    <!-- Full Cosmos SDK signing pipeline (BIP-39 → bech32 → protobuf TxRaw → REST
+         broadcast) is in tree. Address derivation + account-query side verified
+         end-to-end against the live testnet validator. Awaiting a funded-wallet
+         run of the DYDX_TESTNET_MNEMONIC integration test (PlaceLimit + Cancel
+         through the validator) before flipping this to true and shipping 1.2.0. -->
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
