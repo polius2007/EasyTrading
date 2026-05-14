@@ -32,10 +32,46 @@
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="NBitcoin" />
     <PackageReference Include="BouncyCastle.Cryptography" />
+    <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Grpc.Tools" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="EasyTrading.Dydx.UnitTests" />
+  </ItemGroup>
+
+  <!-- ── Cosmos SDK + dYdX .proto compilation ────────────────────────────────
+       Grpc.Tools invokes protoc at build time, producing C# classes from the
+       vendored .proto files under Protos/. We restrict the set to what we
+       actually use (transaction signing flow + account query) — the full
+       dydxprotocol surface has dozens of files that aren't needed here.   ─── -->
+  <ItemGroup>
+    <Protobuf Include="Protos/cosmos/base/v1beta1/coin.proto"           ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/cosmos/crypto/secp256k1/keys.proto"       ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/cosmos/crypto/multisig/v1beta1/multisig.proto" ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/cosmos/tx/signing/v1beta1/signing.proto"  ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/cosmos/tx/v1beta1/tx.proto"               ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/cosmos/auth/v1beta1/auth.proto"           ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/cosmos/msg/v1/msg.proto"                  ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/cosmos_proto/cosmos.proto"                ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/amino/amino.proto"                        ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/gogoproto/gogo.proto"                     ProtoRoot="Protos" GrpcServices="None" />
+
+    <Protobuf Include="Protos/dydxprotocol/subaccounts/subaccount.proto" ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/dydxprotocol/subaccounts/asset_position.proto" ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/dydxprotocol/subaccounts/perpetual_position.proto" ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/dydxprotocol/clob/order.proto"            ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/dydxprotocol/clob/order_removals.proto"   ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/dydxprotocol/clob/clob_pair.proto"        ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/dydxprotocol/clob/equity_tier_limit_config.proto" ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/dydxprotocol/clob/block_rate_limit_config.proto"  ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/dydxprotocol/clob/liquidations.proto"     ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/dydxprotocol/clob/liquidations_config.proto" ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/dydxprotocol/clob/matches.proto"          ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/dydxprotocol/clob/operation.proto"        ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/dydxprotocol/clob/tx.proto"               ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/dydxprotocol/sending/transfer.proto"      ProtoRoot="Protos" GrpcServices="None" />
+    <Protobuf Include="Protos/dydxprotocol/sending/tx.proto"            ProtoRoot="Protos" GrpcServices="None" />
   </ItemGroup>
 
 </Project>

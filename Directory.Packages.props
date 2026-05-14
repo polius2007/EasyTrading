@@ -32,6 +32,10 @@
     <PackageVersion Include="NBitcoin" Version="8.0.5" />
     <!-- BouncyCastle: secp256k1 ECDSA with RFC-6979 deterministic k + low-S canonicalisation. -->
     <PackageVersion Include="BouncyCastle.Cryptography" Version="2.5.1" />
+    <!-- Google.Protobuf: runtime support for codegen'd Cosmos SDK + dYdX protobuf messages. -->
+    <PackageVersion Include="Google.Protobuf" Version="3.28.3" />
+    <!-- Grpc.Tools: brings protoc + the MSBuild target that compiles .proto files at build time. -->
+    <PackageVersion Include="Grpc.Tools" Version="2.66.0" />
   </ItemGroup>
 
   <ItemGroup Label="Tests">
