@@ -13,11 +13,11 @@ A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClie
 
 ## Status
 
-| Exchange    | Package                              | REST | WebSocket | Signing | Latest      |
-|-------------|--------------------------------------|:----:|:---------:|:-------:|:-----------:|
-| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅  |    ✅     |   ✅    | `1.0.0`     |
-| Aster       | `EasyTrading.Aster` *(planned)*      |   —  |     —     |    —    |     —       |
-| dYdX v4     | `EasyTrading.Dydx` *(planned)*       |   —  |     —     |    —    |     —       |
+| Exchange    | Package                              | REST       | WebSocket | Signing | Latest               |
+|-------------|--------------------------------------|:----------:|:---------:|:-------:|:--------------------:|
+| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅        |    ✅     |   ✅    | `1.0.0`              |
+| Aster       | `EasyTrading.Aster`                  | reads only |   wip     |   wip   | `1.1.0-alpha.1` (wip) |
+| dYdX v4     | `EasyTrading.Dydx` *(planned)*       |   —        |    —      |    —    |     —                |
 
 HyperLiquid coverage at `1.0.0`:
 
@@ -106,7 +106,7 @@ Methods are grouped by entity. Everything about orders is on `Orders`; everythin
 ## Roadmap
 
 - [x] HyperLiquid — REST + WebSocket + EIP-712 signing + hardening → `1.0.0`
-- [ ] Aster — `EasyTrading.Aster`
+- [ ] Aster — `EasyTrading.Aster` *(in progress: scaffold + Markets reads landed in `1.1.0-alpha.1`; signed reads, writes via EIP-712, and WebSocket pending)*
 - [ ] dYdX v4 — `EasyTrading.Dydx` (STARK signatures)
 
 ## Documentation

@@ -4,27 +4,16 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace EasyTrading.HyperLiquid;
 
-/// <summary>DI registration entry-points for EasyTrading and the HyperLiquid client.</summary>
+/// <summary>DI registration entry-point for the HyperLiquid client.</summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the base EasyTrading services. Call this once, then chain one or more
-    /// exchange-specific registrations such as <see cref="AddHyperLiquid"/>.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <returns>An <see cref="IEasyTradingBuilder"/> for chaining.</returns>
-    public static IEasyTradingBuilder AddEasyTrading(this IServiceCollection services)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-        return new EasyTradingBuilder(services);
-    }
-
-    /// <summary>
-    /// Registers a <see cref="HyperLiquidClient"/> with the configured options.
+    /// Registers a <see cref="HyperLiquidClient"/> with the configured options. Chain after
+    /// <c>services.AddEasyTrading()</c>.
     /// </summary>
     /// <param name="builder">The EasyTrading builder.</param>
     /// <param name="configure">Configures <see cref="HyperLiquidClientOptions"/>.</param>
-    /// <returns>The builder, for chaining.</returns>
+    /// <returns>The builder, for chaining further venue registrations.</returns>
     public static IEasyTradingBuilder AddHyperLiquid(
         this IEasyTradingBuilder builder,
         Action<HyperLiquidClientOptions> configure)
@@ -39,16 +28,4 @@ public static class ServiceCollectionExtensions
 
         return builder;
     }
-}
-
-/// <summary>Builder type returned by <see cref="ServiceCollectionExtensions.AddEasyTrading"/>.</summary>
-public interface IEasyTradingBuilder
-{
-    /// <summary>The underlying service collection.</summary>
-    IServiceCollection Services { get; }
-}
-
-internal sealed class EasyTradingBuilder(IServiceCollection services) : IEasyTradingBuilder
-{
-    public IServiceCollection Services { get; } = services;
 }

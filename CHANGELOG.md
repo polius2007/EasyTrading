@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0-alpha.1] — Aster scaffold (Phase 6.0) + IEasyTradingBuilder moved to Abstractions
+
+This release lands the **EasyTrading.Aster** scaffold. The Markets read surface works end-to-end
+against Aster Finance live mainnet (exchangeInfo, depth, ticker price, premiumIndex,
+fundingRate, recent trades, openInterest). Every other module throws
+<c>NotImplementedException</c> with a precise Phase-6.x pointer; subsequent phases land them.
+
+### Added — `EasyTrading.Aster` package
+
+- `AsterClient`, `IAsterExchange`, `AsterClientOptions`, `AsterCredentials`, `AsterNetwork`
+  (Mainnet / Testnet), `AsterRetryOptions` — public surface mirrors the HyperLiquid shape.
+- `AsterMarkets` — all 10 `IMarkets` methods backed by V3 Futures public endpoints (only
+  `GetCandlesAsync` pending Phase 6.1). 3 integration tests verified against live mainnet
+  (exchangeInfo, depth(BTCUSDT), allMids).
+- `AsterNonce` — strictly monotonic microsecond nonce, matching Aster's V3 nonce window rules.
+- `AsterHttp` — shared retry layer (network errors / timeouts / 5xx / 429 with `Retry-After`),
+  same contract as HyperLiquid's `HlHttp`.
+- DI: `services.AddEasyTrading().AddAster(o => ...)`. Aster is also registered as a keyed
+  `IExchangeClient` under the key `"aster"`, so hosts running BOTH HyperLiquid and Aster can
+  resolve each by name.
+
+### Pending — subsequent Aster phases
+
+- **Phase 6.1** — signed read endpoints (Account / Positions / Trades / candles).
+- **Phase 6.2** — Aster Exchange + EIP-712 signing (`AsterSignTransaction` domain, chainId 1666);
+  Orders / Positions writes, Transfers, ApproveAgent.
+- **Phase 6.3** — WebSocket market and user data streams (Binance-style listenKey lifecycle).
+
+### Changed — `IEasyTradingBuilder` and `AddEasyTrading()` moved to `EasyTrading.Abstractions`
+
+To let any venue package chain off `IEasyTradingBuilder` without an outward dependency on
+`EasyTrading.HyperLiquid`, the `IEasyTradingBuilder` interface and `AddEasyTrading()` extension
+moved from `EasyTrading.HyperLiquid` (namespace `EasyTrading.HyperLiquid`) to
+`EasyTrading.Abstractions` (namespace `EasyTrading.Abstractions`).
+
+**Source impact**: callers writing `services.AddEasyTrading().AddHyperLiquid(...)` only need to
+ensure `using EasyTrading.Abstractions;` is in scope — which almost every existing user already
+has, since `IExchangeClient`, `OrderRequest`, `OrderSide`, etc. all live there. Callers who
+imported `IEasyTradingBuilder` explicitly with `using EasyTrading.HyperLiquid;` should switch
+to `using EasyTrading.Abstractions;`.
+
+**Binary impact**: code compiled against `EasyTrading.HyperLiquid 1.0.0` references
+`EasyTrading.HyperLiquid.IEasyTradingBuilder`, which no longer exists in `1.1.0`. Recompile
+against the new package; no API-level change is required beyond the namespace import.
+
+### Tests
+
+89 (HyperLiquid) + 6 (Aster smoke) = 95 unit tests, plus 5 (HL) + 3 (Aster) integration tests
+against live mainnet — all green on `net8.0` and `net9.0`. Build clean.
+
 ## [1.0.0] — HyperLiquid stable release
 
 First stable release. HyperLiquid coverage is feature-complete and the public API is now

@@ -7,7 +7,9 @@ This file is read automatically by Claude Code when working in this repository. 
 - `src/EasyTrading.Abstractions/` — cross-DEX interfaces and models, no runtime deps
 - `src/EasyTrading.Core/` — shared infrastructure (HTTP, WebSocket, signing helpers)
 - `src/EasyTrading.HyperLiquid/` — HyperLiquid client (REST + WebSocket + signing)
-- `tests/EasyTrading.HyperLiquid.UnitTests/` — unit + integration tests (xUnit + NSubstitute)
+- `src/EasyTrading.Aster/` — Aster client (scaffold + Markets reads landed; signing + WS pending)
+- `tests/EasyTrading.HyperLiquid.UnitTests/` — HL unit + integration tests (xUnit + NSubstitute)
+- `tests/EasyTrading.Aster.UnitTests/` — Aster unit + integration tests (xUnit)
 - `samples/EasyTrading.Samples.Console/` — usage demo
 - `docs/` — DocFX site (deploys to https://easytrading.pw via the `docs.yml` workflow)
 - `.github/workflows/` — `ci.yml` (build + test), `release.yml` (NuGet on tag), `docs.yml` (Pages)
@@ -23,7 +25,10 @@ The library ships in phases. See [CHANGELOG.md](CHANGELOG.md) for the live state
 | 3 | HyperLiquid Exchange endpoint + EIP-712 signing  | ✅     |
 | 4 | HyperLiquid WebSocket streaming                  | ✅     |
 | 5 | Hardening (validation + retry + gap recovery)    | ✅     |
-| 6 | Aster client                                     | ⏳     |
+| 6.0 | Aster scaffold + Markets reads                 | ✅     |
+| 6.1 | Aster signed reads (Account/Positions/Trades)  | ⏳     |
+| 6.2 | Aster Exchange + EIP-712 signing               | ⏳     |
+| 6.3 | Aster WebSocket streaming                      | ⏳     |
 | 7 | dYdX v4 client                                   | ⏳     |
 
 ## Coding conventions
@@ -65,8 +70,8 @@ The `release.yml` workflow builds, packs, and pushes every `EasyTrading.*` NuGet
 
 When making changes, the bar is:
 - `dotnet build EasyTrading.slnx` — clean (0 warnings, 0 errors, net8.0 + net9.0)
-- `dotnet test EasyTrading.slnx` — all unit tests green (currently 89)
-- With `EASYTRADING_INTEGRATION=1`, integration tests also green (currently 5, all hitting live HL mainnet)
+- `dotnet test EasyTrading.slnx` — all unit tests green (currently 95: 89 HL + 6 Aster smoke)
+- With `EASYTRADING_INTEGRATION=1`, integration tests also green (currently 8: 5 HL + 3 Aster, all live mainnet)
 
 If a build error is an analyzer warning (CA*/IDE*), the fix is usually to either suppress it in `Directory.Build.props` `<NoWarn>` with a one-line justification, or to refactor minimally. Don't suppress to hide real bugs.
 

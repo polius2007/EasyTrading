@@ -13,8 +13,9 @@
 
 ## Packages
 
-- [EasyTrading.HyperLiquid](https://www.nuget.org/packages/EasyTrading.HyperLiquid): HyperLiquid client (REST + WebSocket + EIP-712 signing)
-- [EasyTrading.Abstractions](https://www.nuget.org/packages/EasyTrading.Abstractions): Cross-DEX interfaces and models (no runtime deps)
+- [EasyTrading.HyperLiquid](https://www.nuget.org/packages/EasyTrading.HyperLiquid): HyperLiquid client (REST + WebSocket + EIP-712 signing), stable at 1.0.0
+- [EasyTrading.Aster](https://www.nuget.org/packages/EasyTrading.Aster): Aster Finance perp DEX client (scaffold + Markets reads landed in 1.1.0-alpha.1; signed reads, writes, WS pending)
+- [EasyTrading.Abstractions](https://www.nuget.org/packages/EasyTrading.Abstractions): Cross-DEX interfaces and models (IExchangeClient, IEasyTradingBuilder, all DTOs)
 - [EasyTrading.Core](https://www.nuget.org/packages/EasyTrading.Core): Shared infrastructure (HTTP, WS, retries, signing helpers)
 
 ## Source

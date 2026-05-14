@@ -6,8 +6,10 @@
     <Project Path="src/EasyTrading.Abstractions/EasyTrading.Abstractions.csproj" />
     <Project Path="src/EasyTrading.Core/EasyTrading.Core.csproj" />
     <Project Path="src/EasyTrading.HyperLiquid/EasyTrading.HyperLiquid.csproj" />
+    <Project Path="src/EasyTrading.Aster/EasyTrading.Aster.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/EasyTrading.HyperLiquid.UnitTests/EasyTrading.HyperLiquid.UnitTests.csproj" />
+    <Project Path="tests/EasyTrading.Aster.UnitTests/EasyTrading.Aster.UnitTests.csproj" />
   </Folder>
 </Solution>
