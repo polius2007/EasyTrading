@@ -10,15 +10,15 @@ EasyTrading is a unified .NET client for decentralised perpetual and spot exchan
 
 🌐 **Home:** [easytrading.pw](https://easytrading.pw)
 
-> **Status — alpha, fully functional on HyperLiquid.** Read / write / stream all work end-to-end against live mainnet (verified by 5 integration tests). EIP-712 signing implemented for L1 and user-signed actions. WebSocket streaming with reconnect. Builder fee is auto-attached and auto-approved on the first order. Aster and dYdX v4 are next.
+> **Status — `1.0-rc.1`, production-grade on HyperLiquid.** Read / write / stream all work end-to-end against live mainnet (verified by 5 integration tests). EIP-712 signing for L1 and user-signed actions. WebSocket streaming with reconnect **and REST-based gap recovery** for user streams. Pre-flight order validation (tick / lot / min-notional). REST retry policy with exponential backoff, jitter, and `Retry-After` support. Builder fee is auto-attached and auto-approved on the first order. Aster and dYdX v4 are next.
 
 ## Supported DEXes
 
-| Exchange    | Package                              | REST | WebSocket | Signing | Status |
-|-------------|--------------------------------------|:----:|:---------:|:-------:|:------:|
-| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅  |    ✅     |   ✅    | alpha  |
-| Aster       | `EasyTrading.Aster` *(planned)*      |   —  |     —     |    —    |   —    |
-| dYdX v4     | `EasyTrading.Dydx` *(planned)*       |   —  |     —     |    —    |   —    |
+| Exchange    | Package                              | REST | WebSocket | Signing | Status   |
+|-------------|--------------------------------------|:----:|:---------:|:-------:|:--------:|
+| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅  |    ✅     |   ✅    | `1.0-rc` |
+| Aster       | `EasyTrading.Aster` *(planned)*      |   —  |     —     |    —    |    —     |
+| dYdX v4     | `EasyTrading.Dydx` *(planned)*       |   —  |     —     |    —    |    —     |
 
 ## Install
 
@@ -85,14 +85,27 @@ Methods are grouped by **entity** — all order operations live under `Orders`, 
 | `Vaults` (HL only) | Vault details, deposit, withdraw                              |   ✅   |
 | `Staking` (HL only)| Delegate / undelegate / rewards                               |   ✅   |
 
+## Production-readiness (new in `1.0-rc.1`)
+
+- **Pre-flight order validation** — orders that violate HL's tick / lot / min-notional rules are
+  rejected client-side with a precise `InvalidOrderException` before the request goes on the wire.
+- **REST retry policy** — network errors, timeouts, 5xx and 429 responses are retried with
+  exponential backoff + ±25% jitter + `Retry-After` honouring. Writes are safe to retry because HL
+  de-duplicates by signed nonce. Configure via `options.RetryPolicy` or set `MaxAttempts = 1` to
+  disable.
+- **WS gap recovery for user streams** — `Streams.MyFills/MyOrders/MyFundings` automatically fetch
+  REST catch-up on every reconnect and dedupe against the live stream, so events that fired in the
+  disconnect window aren't silently dropped.
+
 ## Roadmap
 
 - [x] **Phase 1** — Solution scaffold, full public API surface, CI/CD, docs site
 - [x] **Phase 2** — HyperLiquid `Info` endpoint (all read types)
 - [x] **Phase 3** — HyperLiquid `Exchange` endpoint + EIP-712 signing (orders, transfers, leverage, vault, staking, agent / builder approvals)
 - [x] **Phase 4** — HyperLiquid WebSocket streaming (9 channels + reconnect + per-subscriber back-pressure)
-- [ ] **Phase 5** — `EasyTrading.Aster` client
-- [ ] **Phase 6** — `EasyTrading.Dydx` (dYdX v4) client
+- [x] **Phase 5** — Hardening: order validation, REST resilience, WS gap recovery → `1.0-rc.1`
+- [ ] **Phase 6** — `EasyTrading.Aster` client
+- [ ] **Phase 7** — `EasyTrading.Dydx` (dYdX v4) client
 
 ## Documentation
 
@@ -129,7 +142,7 @@ If you're forking this repo or running a private build, before publishing your f
 Release a new version with a single tag push:
 
 ```bash
-git tag v0.4.0-alpha.1 && git push --tags
+git tag v1.0.0-rc.1 && git push --tags
 ```
 
 The `release.yml` workflow builds, packs, and pushes all `EasyTrading.*` packages to NuGet automatically.

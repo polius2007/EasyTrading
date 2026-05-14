@@ -1,13 +1,12 @@
 using System.Net;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 using EasyTrading.Abstractions;
 
 namespace EasyTrading.HyperLiquid.Infrastructure;
 
 /// <summary>
-/// Typed wrapper around the HyperLiquid <c>POST /info</c> endpoint.
+/// Typed wrapper around the HyperLiquid <c>POST /info</c> endpoint. All requests share the
+/// configured retry policy via <see cref="HlHttp"/>.
 /// </summary>
 /// <remarks>
 /// Every Info request is a JSON POST with a body of <c>{ "type": "&lt;requestType&gt;", ... }</c>.
@@ -18,6 +17,7 @@ namespace EasyTrading.HyperLiquid.Infrastructure;
 internal sealed class HlInfoClient
 {
     private readonly HttpClient _http;
+    private readonly HyperLiquidClientOptions _options;
     private readonly Uri _infoUrl;
 
     public HlInfoClient(HttpClient http, HyperLiquidClientOptions options)
@@ -26,46 +26,35 @@ internal sealed class HlInfoClient
         ArgumentNullException.ThrowIfNull(options);
 
         _http = http;
+        _options = options;
         _infoUrl = new Uri(options.GetEffectiveRestBaseUrl(), "info");
     }
 
     /// <summary>Send a typed Info request and deserialize the response to <typeparamref name="TResponse"/>.</summary>
     public async Task<TResponse> PostAsync<TResponse>(object request, CancellationToken ct)
     {
-        var responseStream = await SendAsync(request, ct).ConfigureAwait(false);
-        await using (responseStream.ConfigureAwait(false))
-        {
-            var result = await JsonSerializer
-                .DeserializeAsync<TResponse>(responseStream, HlJsonOptions.Default, ct)
-                .ConfigureAwait(false);
-
-            return result
-                ?? throw new ExchangeApiException("HyperLiquid Info returned a null JSON document.");
-        }
+        var body = await SendAsync(request, ct).ConfigureAwait(false);
+        var result = JsonSerializer.Deserialize<TResponse>(body, HlJsonOptions.Default);
+        return result
+            ?? throw new ExchangeApiException("HyperLiquid Info returned a null JSON document.");
     }
 
     /// <summary>Send an Info request and return the response as a parsed <see cref="JsonElement"/>.</summary>
     public async Task<JsonElement> PostRawAsync(object request, CancellationToken ct)
     {
-        var responseStream = await SendAsync(request, ct).ConfigureAwait(false);
-        await using (responseStream.ConfigureAwait(false))
-        {
-            using var doc = await JsonDocument.ParseAsync(responseStream, cancellationToken: ct).ConfigureAwait(false);
-            return doc.RootElement.Clone();
-        }
+        var body = await SendAsync(request, ct).ConfigureAwait(false);
+        using var doc = JsonDocument.Parse(body);
+        return doc.RootElement.Clone();
     }
 
-    private async Task<Stream> SendAsync(object request, CancellationToken ct)
+    private async Task<string> SendAsync(object request, CancellationToken ct)
     {
         var json = JsonSerializer.Serialize(request, HlJsonOptions.Default);
 
-        using var content = new StringContent(json, Encoding.UTF8);
-        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
-        HttpResponseMessage response;
+        HlHttpResult result;
         try
         {
-            response = await _http.PostAsync(_infoUrl, content, ct).ConfigureAwait(false);
+            result = await HlHttp.PostJsonAsync(_http, _infoUrl, json, _options.RetryPolicy, ct).ConfigureAwait(false);
         }
         catch (HttpRequestException ex)
         {
@@ -76,25 +65,22 @@ internal sealed class HlInfoClient
             throw new ExchangeApiException("HyperLiquid Info request timed out.", innerException: ex);
         }
 
-        if (!response.IsSuccessStatusCode)
+        if ((int)result.StatusCode is < 200 or >= 300)
         {
-            var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-            response.Dispose();
-
-            throw response.StatusCode switch
+            throw result.StatusCode switch
             {
                 HttpStatusCode.TooManyRequests
-                    => new RateLimitException($"HyperLiquid rate-limited the request. Body: {Truncate(body)}"),
+                    => new RateLimitException($"HyperLiquid rate-limited the request. Body: {Truncate(result.Body)}"),
 
                 HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
-                    => new AuthenticationException($"HyperLiquid rejected the request ({(int)response.StatusCode}). Body: {Truncate(body)}"),
+                    => new AuthenticationException($"HyperLiquid rejected the request ({(int)result.StatusCode}). Body: {Truncate(result.Body)}"),
 
                 _ => new ExchangeApiException(
-                    $"HyperLiquid Info request failed: {(int)response.StatusCode} {response.ReasonPhrase}. Body: {Truncate(body)}"),
+                    $"HyperLiquid Info request failed: {(int)result.StatusCode} {result.ReasonPhrase}. Body: {Truncate(result.Body)}"),
             };
         }
 
-        return await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+        return result.Body;
     }
 
     private static string Truncate(string s) => s.Length <= 500 ? s : s[..500] + "…";

@@ -38,6 +38,14 @@ internal sealed class HlWebSocketClient : IAsyncDisposable
     private Task? _readerTask;
     private int _disposed;
 
+    /// <summary>
+    /// Fires after a reconnect when every active subscription has been re-subscribed on the
+    /// fresh socket. Stream-level gap-recovery hooks (e.g. user-fill REST catch-up in
+    /// <c>HlStreams</c>) attach here. Handlers run synchronously on the reconnect task — keep
+    /// the work tiny and offload anything I/O-bound to <c>Task.Run</c>.
+    /// </summary>
+    public event Action? Reconnected;
+
     public HlWebSocketClient(HyperLiquidClientOptions options, ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -184,6 +192,16 @@ internal sealed class HlWebSocketClient : IAsyncDisposable
                 }
 
                 _logger.LogInformation("HyperLiquid WebSocket reconnected; {Count} subscriptions resubscribed.", _subscriptions.Count);
+
+                // Notify subscribers — used by user-stream gap-recovery to fetch REST catch-up.
+                try
+                {
+                    Reconnected?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Reconnected event handler threw.");
+                }
                 return;
             }
             catch (OperationCanceledException)

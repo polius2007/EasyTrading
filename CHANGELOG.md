@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-rc.1] — Phase 5: hardening for 1.0
+
+This release closes the production-readiness gaps identified in the post-Phase-4 audit:
+pre-flight order validation, REST resilience, and WebSocket gap recovery for user-scoped
+streams. Public API surface is unchanged — every consumer of `0.4.0-alpha.1` upgrades
+without code changes.
+
+### Added — pre-flight order validation
+
+- **`HlOrderValidator`** — runs before any `Orders.Place*` / `Orders.Modify*` / `Orders.PlaceTwap*` call:
+  - Size must be > 0 with ≤ `szDecimals` fractional digits.
+  - Price must have ≤ 5 significant figures (integer prices are always allowed) and
+    ≤ `(IsSpot ? 8 : 6) - szDecimals` fractional digits.
+  - Minimum order notional of $10 USDC, skipped for reduce-only orders.
+- **`HlMetaCache.GetAssetInfoAsync`** — new richer lookup returning `(AssetId, SzDecimals, IsSpot)` per market.
+  The cache now hydrates per-asset metadata at first use; spot pairs derive `SzDecimals` from the
+  base token in `spotMeta.tokens`.
+
+Invalid orders now throw `InvalidOrderException` with a precise message before they hit the network.
+
+### Added — REST resilience
+
+- **`HyperLiquidRetryOptions`** — exposed via `HyperLiquidClientOptions.RetryPolicy`. Defaults:
+  3 attempts, 200 ms initial delay, ×2 exponential backoff capped at 5 s, ±25% jitter.
+- **`HlHttp.PostJsonAsync`** — shared retry layer used by both `HlInfoClient` and `HlExchangeClient`.
+  Retries on:
+  - Transport errors (`HttpRequestException`).
+  - HttpClient-triggered timeouts (caller cancellation is honoured immediately).
+  - 5xx and 408 responses (configurable via `RetryOnServerError`).
+  - 429 Too Many Requests, honouring the server's `Retry-After` header (configurable via `RetryOnRateLimit`).
+- Writes are safe to retry because HyperLiquid de-duplicates by signed nonce.
+
+### Added — WebSocket gap recovery for user streams
+
+- **`HlWebSocketClient.Reconnected`** — new event fires after every successful reconnect +
+  re-subscribe cycle.
+- **`HlStreamGapFill.WithRecoveryAsync`** — generic helper that wraps a live WS stream:
+  - Tracks the maximum event timestamp seen.
+  - On each reconnect, calls a per-stream REST callback to fetch events since
+    `lastSeenTimestamp − 5 s` (grace window).
+  - Deduplicates against a sliding 1024-ID window so events delivered by both the live stream and
+    the REST catch-up are emitted exactly once.
+- Wired into `Streams.MyOrdersAsync`, `Streams.MyFillsAsync`, `Streams.MyFundingsAsync`. Public
+  channels and notifications are unchanged — public data is snapshotted on resubscribe and
+  notifications have no REST equivalent.
+
+### Tests
+
+- Unit: 61 → 88 (+15 validator, +8 retry, +4 gap recovery).
+- Integration: 5/5 still green against HL mainnet.
+
+### Notes
+
+- This is the first release-candidate. Public API is now frozen for `1.0`; anything that breaks
+  the surface gets a `2.0` major bump.
+- `HlMetaCache`'s internal lookup dictionary changed from `Dictionary<string, int>` to
+  `Dictionary<string, HlAssetInfo>` — internal-only, no caller impact.
+- `HlStreams` now takes `HlInfoClient` in its constructor; only `HyperLiquidClient` constructs it,
+  so this is transparent.
+
 ## [0.4.0-alpha.1] — Phase 4: HyperLiquid WebSocket streaming
 
 ### Added

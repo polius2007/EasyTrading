@@ -22,7 +22,7 @@ This site is the **API reference**, auto-generated from the XML doc-comments on 
 
 ## Status
 
-✅ **Alpha — HyperLiquid is functionally complete.** Read, write, and WebSocket streaming all work end-to-end against live mainnet, verified by integration tests. EIP-712 signing for L1 and user-signed actions. Builder fees are auto-attached and auto-approved on the first order.
+✅ **`1.0-rc.1` — HyperLiquid is production-grade.** Read, write, and WebSocket streaming all work end-to-end against live mainnet, verified by integration tests. EIP-712 signing for L1 and user-signed actions. Pre-flight order validation (tick / lot / min-notional). REST retry policy with backoff + `Retry-After`. WS gap recovery for user streams. Builder fees are auto-attached and auto-approved on the first order.
 
 Aster and dYdX v4 clients are next.
 

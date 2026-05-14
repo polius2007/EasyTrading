@@ -22,8 +22,9 @@ The library ships in phases. See [CHANGELOG.md](CHANGELOG.md) for the live state
 | 2 | HyperLiquid Info endpoint (read-only)            | ✅     |
 | 3 | HyperLiquid Exchange endpoint + EIP-712 signing  | ✅     |
 | 4 | HyperLiquid WebSocket streaming                  | ✅     |
-| 5 | Aster client                                     | ⏳     |
-| 6 | dYdX v4 client                                   | ⏳     |
+| 5 | Hardening (validation + retry + gap recovery)    | ✅     |
+| 6 | Aster client                                     | ⏳     |
+| 7 | dYdX v4 client                                   | ⏳     |
 
 ## Coding conventions
 
@@ -54,7 +55,7 @@ dotnet run --project samples/EasyTrading.Samples.Console
 ## Release flow
 
 ```powershell
-git tag v0.4.0-alpha.1
+git tag v1.0.0-rc.1
 git push --tags
 ```
 
@@ -64,7 +65,7 @@ The `release.yml` workflow builds, packs, and pushes every `EasyTrading.*` NuGet
 
 When making changes, the bar is:
 - `dotnet build EasyTrading.slnx` — clean (0 warnings, 0 errors, net8.0 + net9.0)
-- `dotnet test EasyTrading.slnx` — all unit tests green (currently 61)
+- `dotnet test EasyTrading.slnx` — all unit tests green (currently 88)
 - With `EASYTRADING_INTEGRATION=1`, integration tests also green (currently 5, all hitting live HL mainnet)
 
 If a build error is an analyzer warning (CA*/IDE*), the fix is usually to either suppress it in `Directory.Build.props` `<NoWarn>` with a one-line justification, or to refactor minimally. Don't suppress to hide real bugs.

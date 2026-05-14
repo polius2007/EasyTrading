@@ -1,6 +1,4 @@
 using System.Net;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 using EasyTrading.Abstractions;
 
@@ -116,13 +114,10 @@ internal sealed class HlExchangeClient
     {
         var json = JsonSerializer.Serialize(envelope, HlJsonOptions.Default);
 
-        using var content = new StringContent(json, Encoding.UTF8);
-        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
-        HttpResponseMessage response;
+        HlHttpResult result;
         try
         {
-            response = await _http.PostAsync(_exchangeUrl, content, ct).ConfigureAwait(false);
+            result = await HlHttp.PostJsonAsync(_http, _exchangeUrl, json, _options.RetryPolicy, ct).ConfigureAwait(false);
         }
         catch (HttpRequestException ex)
         {
@@ -133,24 +128,21 @@ internal sealed class HlExchangeClient
             throw new ExchangeApiException("HyperLiquid Exchange request timed out.", innerException: ex);
         }
 
-        var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-        response.Dispose();
-
-        if (!response.IsSuccessStatusCode)
+        if ((int)result.StatusCode is < 200 or >= 300)
         {
-            throw response.StatusCode switch
+            throw result.StatusCode switch
             {
                 HttpStatusCode.TooManyRequests
-                    => new RateLimitException($"HyperLiquid rate-limited the request. Body: {Truncate(body)}"),
+                    => new RateLimitException($"HyperLiquid rate-limited the request. Body: {Truncate(result.Body)}"),
                 HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
-                    => new AuthenticationException($"HyperLiquid rejected the request ({(int)response.StatusCode}). Body: {Truncate(body)}"),
+                    => new AuthenticationException($"HyperLiquid rejected the request ({(int)result.StatusCode}). Body: {Truncate(result.Body)}"),
                 _ => new ExchangeApiException(
-                    $"HyperLiquid Exchange request failed: {(int)response.StatusCode} {response.ReasonPhrase}. Body: {Truncate(body)}"),
+                    $"HyperLiquid Exchange request failed: {(int)result.StatusCode} {result.ReasonPhrase}. Body: {Truncate(result.Body)}"),
             };
         }
 
         // Parse and unwrap the response envelope.
-        using var doc = JsonDocument.Parse(body);
+        using var doc = JsonDocument.Parse(result.Body);
         var root = doc.RootElement.Clone();
 
         if (root.TryGetProperty("status", out var statusEl) &&
@@ -164,7 +156,7 @@ internal sealed class HlExchangeClient
 
         if (!root.TryGetProperty("response", out var responseEl))
         {
-            throw new ExchangeApiException($"HyperLiquid Exchange returned an unexpected envelope: {Truncate(body)}");
+            throw new ExchangeApiException($"HyperLiquid Exchange returned an unexpected envelope: {Truncate(result.Body)}");
         }
 
         return responseEl.Clone();

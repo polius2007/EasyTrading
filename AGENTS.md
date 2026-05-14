@@ -4,7 +4,7 @@ This file tells AI tools (Claude Code, Cursor, GitHub Copilot, Aider, Continue, 
 
 ## What EasyTrading is
 
-EasyTrading is a multi-DEX trading client for .NET. The same `IExchangeClient` interface drives every supported DEX (HyperLiquid is alpha-complete; Aster and dYdX v4 planned), so strategies can switch venues by changing the DI registration only.
+EasyTrading is a multi-DEX trading client for .NET. The same `IExchangeClient` interface drives every supported DEX (HyperLiquid is at `1.0-rc`; Aster and dYdX v4 planned), so strategies can switch venues by changing the DI registration only.
 
 - **Home**: [easytrading.pw](https://easytrading.pw)
 - **Source**: [github.com/polius2007/EasyTrading](https://github.com/polius2007/EasyTrading)
@@ -16,6 +16,9 @@ EasyTrading is a multi-DEX trading client for .NET. The same `IExchangeClient` i
 - Read / write / stream all functional against live HyperLiquid mainnet (verified by integration tests).
 - Signing: EIP-712 L1 (phantom-agent) + user-signed flavours, both implemented.
 - WebSocket: 9 channels with reconnect + per-subscriber back-pressure.
+- **Pre-flight order validation** rejects orders that would fail HL's tick / lot / min-notional rules before they go on the wire. Suggest typed `Orders.Place*` calls; don't pre-validate manually in user code.
+- **REST resilience**: network errors, timeouts, 5xx, and 429 (with `Retry-After`) are retried with exponential backoff + jitter. Configure via `HyperLiquidClientOptions.RetryPolicy` (default: 3 attempts).
+- **WS gap recovery**: user-scoped streams (`MyFills`, `MyOrders`, `MyFundings`) fetch REST catch-up on every reconnect and dedupe against the live feed. Consumers see one unified `IAsyncEnumerable<T>` and don't need to handle reconnects in user code.
 - Builder-fee routing: automatic. Library transparently calls `approveBuilderFee` on first order per trader; subsequent orders carry the `builder` field directly. No setup required for the consumer.
 
 ## Core conventions (apply always)

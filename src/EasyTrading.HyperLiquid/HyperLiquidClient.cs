@@ -72,7 +72,7 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
         Trades    = new HlTrades(info, _options);
         Account   = new HlAccount(info, exchange, _options);
         Transfers = new HlTransfers(exchange, _options);
-        Streams   = new HlStreams(_ws, _options);
+        Streams   = new HlStreams(_ws, info, _options);
         Vaults    = new HlVaults(info, exchange, _options);
         Staking   = new HlStaking(info, exchange, _options);
     }

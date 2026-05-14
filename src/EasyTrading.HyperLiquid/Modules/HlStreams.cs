@@ -6,8 +6,13 @@ using EasyTrading.HyperLiquid.Infrastructure;
 
 namespace EasyTrading.HyperLiquid.Modules;
 
-/// <summary>HyperLiquid implementation of <see cref="IStreams"/>. Multiplexes all subscriptions over a single shared <see cref="HlWebSocketClient"/>.</summary>
-internal sealed class HlStreams(HlWebSocketClient ws, HyperLiquidClientOptions options) : IStreams
+/// <summary>
+/// HyperLiquid implementation of <see cref="IStreams"/>. Multiplexes all subscriptions over a
+/// single shared <see cref="HlWebSocketClient"/>, and layers REST-based gap recovery on top of
+/// the user-scoped channels (fills, orders, fundings) so events that fall in the disconnect
+/// window aren't silently dropped.
+/// </summary>
+internal sealed class HlStreams(HlWebSocketClient ws, HlInfoClient info, HyperLiquidClientOptions options) : IStreams
 {
     // ─── Public channels ─────────────────────────────────────────────────────
 
@@ -51,31 +56,97 @@ internal sealed class HlStreams(HlWebSocketClient ws, HyperLiquidClientOptions o
     public IAsyncEnumerable<OrderUpdate> MyOrdersAsync(CancellationToken ct)
     {
         var user = RequireUser();
-        return ws.SubscribeAsync<OrderUpdate>(
+        var live = ws.SubscribeAsync<OrderUpdate>(
             subscribePayload: new HlMap().Add("type", "orderUpdates").Add("user", user),
             subscriptionKey:  "orderUpdates",
             parser:           ParseOrderUpdates,
             ct:               ct);
+
+        // REST catch-up uses `historicalOrders` (no time filter on the wire — we filter by
+        // statusTimestamp client-side). ID combines (oid, statusTimestamp) so multiple status
+        // transitions on the same order each get their own dedup slot.
+        return HlStreamGapFill.WithRecoveryAsync(
+            live, ws,
+            fetchSince: async (sinceMs, c) =>
+            {
+                var raw = await info.PostAsync<List<HistoricalOrderRaw>>(
+                    new { type = "historicalOrders", user }, c).ConfigureAwait(false);
+                return raw
+                    .Where(o => o.StatusTimestamp >= sinceMs)
+                    .Select(o => new OrderUpdate(HlMapper.Map(o.Order, HlMapper.ParseOrderStatus(o.Status), o.StatusTimestamp)))
+                    .ToList();
+            },
+            getId: u => unchecked(u.Order.OrderId * 2654435761L) ^ u.Order.UpdatedAt.ToUnixTimeMilliseconds(),
+            getTimestampMillis: u => u.Order.UpdatedAt.ToUnixTimeMilliseconds(),
+            ct: ct);
     }
 
     public IAsyncEnumerable<FillUpdate> MyFillsAsync(CancellationToken ct)
     {
         var user = RequireUser();
-        return ws.SubscribeAsync<FillUpdate>(
+        var live = ws.SubscribeAsync<FillUpdate>(
             subscribePayload: new HlMap().Add("type", "userFills").Add("user", user),
             subscriptionKey:  "userFills",
             parser:           ParseUserFills,
             ct:               ct);
+
+        return HlStreamGapFill.WithRecoveryAsync(
+            live, ws,
+            fetchSince: async (sinceMs, c) =>
+            {
+                var raw = await info.PostAsync<List<UserFillRaw>>(new
+                {
+                    type = "userFillsByTime",
+                    user,
+                    startTime = sinceMs,
+                    endTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                }, c).ConfigureAwait(false);
+                return raw.Select(f => new FillUpdate(HlMapper.Map(f))).ToList();
+            },
+            getId: u => u.Fill.TradeId,
+            getTimestampMillis: u => u.Fill.Time.ToUnixTimeMilliseconds(),
+            ct: ct);
     }
 
     public IAsyncEnumerable<FundingUpdate> MyFundingsAsync(CancellationToken ct)
     {
         var user = RequireUser();
-        return ws.SubscribeAsync<FundingUpdate>(
+        var live = ws.SubscribeAsync<FundingUpdate>(
             subscribePayload: new HlMap().Add("type", "userFundings").Add("user", user),
             subscriptionKey:  "userFundings",
             parser:           ParseUserFundings,
             ct:               ct);
+
+        return HlStreamGapFill.WithRecoveryAsync(
+            live, ws,
+            fetchSince: async (sinceMs, c) =>
+            {
+                // `userFunding` returns per-user funding payments since startTime.
+                var arr = await info.PostRawAsync(new
+                {
+                    type = "userFunding",
+                    user,
+                    startTime = sinceMs,
+                    endTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                }, c).ConfigureAwait(false);
+
+                var result = new List<FundingUpdate>();
+                if (arr.ValueKind != System.Text.Json.JsonValueKind.Array) return result;
+                foreach (var f in arr.EnumerateArray())
+                {
+                    var delta = f.GetProperty("delta");
+                    var coin = delta.GetProperty("coin").GetString() ?? string.Empty;
+                    var amount = ParseDec(delta.GetProperty("usdc").GetString() ?? "0");
+                    var rate = ParseDec(delta.GetProperty("fundingRate").GetString() ?? "0");
+                    var time = HlMapper.T(f.GetProperty("time").GetInt64());
+                    result.Add(new FundingUpdate(coin, amount, rate, time));
+                }
+                return result;
+            },
+            // Funding per user-coin fires hourly; (time XOR coin-hash) keeps cross-coin entries distinct.
+            getId: u => u.Time.ToUnixTimeMilliseconds() ^ u.Symbol.GetHashCode(StringComparison.Ordinal),
+            getTimestampMillis: u => u.Time.ToUnixTimeMilliseconds(),
+            ct: ct);
     }
 
     public IAsyncEnumerable<NotificationUpdate> MyNotificationsAsync(CancellationToken ct)

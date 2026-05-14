@@ -72,8 +72,9 @@ internal sealed class HlOrders(
 
     public async Task<PlaceOrderResult> PlaceAsync(OrderRequest request, CancellationToken ct = default)
     {
-        var assetId = await meta.GetAssetIdAsync(request.Symbol, ct).ConfigureAwait(false);
-        var orderWire = BuildOrderWire(assetId, request);
+        var info = await meta.GetAssetInfoAsync(request.Symbol, ct).ConfigureAwait(false);
+        HlOrderValidator.Validate(request.Symbol, request.Price ?? 0m, request.Size, info, request.ReduceOnly);
+        var orderWire = BuildOrderWire(info.AssetId, request);
 
         var action = new HlMap()
             .Add("type", "order")
@@ -93,8 +94,9 @@ internal sealed class HlOrders(
         var wires = new List<object>(requests.Count);
         foreach (var r in requests)
         {
-            var assetId = await meta.GetAssetIdAsync(r.Symbol, ct).ConfigureAwait(false);
-            wires.Add(BuildOrderWire(assetId, r));
+            var info = await meta.GetAssetInfoAsync(r.Symbol, ct).ConfigureAwait(false);
+            HlOrderValidator.Validate(r.Symbol, r.Price ?? 0m, r.Size, info, r.ReduceOnly);
+            wires.Add(BuildOrderWire(info.AssetId, r));
         }
 
         var action = new HlMap()
@@ -164,8 +166,11 @@ internal sealed class HlOrders(
         if (existing is null)
             return new ModifyResult(0, false, "Order not found or no longer open.");
 
-        var assetId = await meta.GetAssetIdAsync(request.Symbol, ct).ConfigureAwait(false);
-        var newOrderWire = BuildModifyOrderWire(assetId, existing, request);
+        var info = await meta.GetAssetInfoAsync(request.Symbol, ct).ConfigureAwait(false);
+        var newPrice = request.NewPrice ?? existing.Price ?? 0m;
+        var newSize = request.NewSize ?? (existing.Size - existing.FilledSize);
+        HlOrderValidator.Validate(request.Symbol, newPrice, newSize, info, existing.ReduceOnly);
+        var newOrderWire = BuildModifyOrderWire(info.AssetId, existing, request);
 
         var action = new HlMap()
             .Add("type", "modify")
@@ -201,10 +206,13 @@ internal sealed class HlOrders(
             if (existing is null)
                 throw new InvalidOrderException($"Cannot modify: order '{r.OrderId?.ToString(CultureInfo.InvariantCulture) ?? r.ClientOrderId}' not found.");
 
-            var assetId = await meta.GetAssetIdAsync(r.Symbol, ct).ConfigureAwait(false);
+            var info = await meta.GetAssetInfoAsync(r.Symbol, ct).ConfigureAwait(false);
+            var newPrice = r.NewPrice ?? existing.Price ?? 0m;
+            var newSize = r.NewSize ?? (existing.Size - existing.FilledSize);
+            HlOrderValidator.Validate(r.Symbol, newPrice, newSize, info, existing.ReduceOnly);
             modifies.Add(new HlMap()
                 .Add("oid", existing.OrderId)
-                .Add("order", BuildModifyOrderWire(assetId, existing, r)));
+                .Add("order", BuildModifyOrderWire(info.AssetId, existing, r)));
             oids.Add(existing.OrderId);
         }
 
@@ -315,10 +323,13 @@ internal sealed class HlOrders(
 
     public async Task<TwapResult> PlaceTwapAsync(TwapRequest request, CancellationToken ct = default)
     {
-        var assetId = await meta.GetAssetIdAsync(request.Symbol, ct).ConfigureAwait(false);
+        var info = await meta.GetAssetInfoAsync(request.Symbol, ct).ConfigureAwait(false);
+        // TWAP has no client-supplied price (HL computes the slice price), so we pass 0
+        // to skip the price-rule and min-notional checks. Size + szDecimals still apply.
+        HlOrderValidator.Validate(request.Symbol, price: 0m, request.Size, info, request.ReduceOnly);
 
         var twapWire = new HlMap()
-            .Add("a", assetId)
+            .Add("a", info.AssetId)
             .Add("b", request.Side == OrderSide.Buy)
             .Add("s", FloatToWire(request.Size))
             .Add("r", request.ReduceOnly)

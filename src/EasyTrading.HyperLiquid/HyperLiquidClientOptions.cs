@@ -24,6 +24,13 @@ public sealed class HyperLiquidClientOptions
     public TimeSpan WebSocketReconnectDelay { get; set; } = TimeSpan.FromSeconds(2);
 
     /// <summary>
+    /// Retry policy for transient REST failures (network errors, timeouts, 5xx, 429).
+    /// Defaults to 3 attempts with exponential backoff starting at 200 ms.
+    /// Set <c>MaxAttempts = 1</c> to disable retries.
+    /// </summary>
+    public HyperLiquidRetryOptions RetryPolicy { get; set; } = new();
+
+    /// <summary>
     /// Optional override for the builder fee attached to each order. When <c>null</c> (default), the
     /// library's built-in builder routing is used to fund continued development. Set to a custom
     /// <see cref="BuilderFee"/> to route fees elsewhere, or use a zero <see cref="BuilderFee.FeeRate"/>
