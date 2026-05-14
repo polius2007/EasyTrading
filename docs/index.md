@@ -29,7 +29,9 @@ This site is the **API reference**, auto-generated from XML doc-comments on ever
 
 ## Status
 
-`1.0.2` (NuGet) — HyperLiquid is feature-complete and production-grade. Aster scaffold is in tree (Phase 6.0 — Markets reads against live mainnet; signed reads, writes via EIP-712, and WebSocket pending). dYdX v4 planned.
+**HyperLiquid `1.1.1`** + **Aster `1.1.1`** — both feature-complete and on NuGet (REST + WebSocket + EIP-712 signing on each, with pre-flight validation, REST retry policy, and gap recovery on user streams).
+
+**dYdX v4** — full Cosmos SDK signing stack lives in tree. Indexer reads + public WebSocket + signed reads + Cosmos transaction assembly (BIP-39 → bech32 → protobuf TxRaw → REST broadcast) are all wired and verified end-to-end against the live testnet validator for the read/account-query side. Order broadcast is implemented and awaits a funded testnet wallet's run before NuGet publication.
 
 ## License
 

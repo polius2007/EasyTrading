@@ -8,7 +8,7 @@ This file is read automatically by Claude Code when working in this repository. 
 - `src/EasyTrading.Core/` — shared infrastructure (HTTP, WebSocket, signing helpers)
 - `src/EasyTrading.HyperLiquid/` — HyperLiquid client (REST + WebSocket + EIP-712 signing) — `1.1.1` on NuGet
 - `src/EasyTrading.Aster/` — Aster client (REST + WebSocket + EIP-712 signing) — `1.1.1` on NuGet
-- `src/EasyTrading.Dydx/` — dYdX v4 client (Indexer REST + public WS); writes via Cosmos SDK pending Phase 7.2 — in tree, not yet packed
+- `src/EasyTrading.Dydx/` — dYdX v4 client (Indexer REST + WebSocket + signed Indexer reads + Cosmos SDK transaction signing). Full pipeline in tree; NuGet publication waits on a funded-wallet test of the order-broadcast path (DYDX_TESTNET_MNEMONIC integration test)
 - `tests/EasyTrading.HyperLiquid.UnitTests/` — HL unit + integration tests (xUnit + NSubstitute)
 - `tests/EasyTrading.Aster.UnitTests/` — Aster unit + integration tests (xUnit)
 - `tests/EasyTrading.Dydx.UnitTests/` — dYdX unit + integration tests (xUnit)
@@ -61,7 +61,7 @@ dotnet run --project samples/EasyTrading.Samples.Console
 ## Release flow
 
 ```powershell
-git tag v1.0.0
+git tag v1.1.1
 git push --tags
 ```
 

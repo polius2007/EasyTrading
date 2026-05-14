@@ -1,6 +1,6 @@
 # EasyTrading
 
-> A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClient` interface across every supported DEX. HyperLiquid and Aster are at `1.1.1` on NuGet; dYdX v4 scaffold is in tree. Methods grouped by entity (Markets, Orders, Positions, Trades, Account, Transfers, Streams). `decimal` for money; `IAsyncEnumerable<T>` for streams; typed exceptions.
+> A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClient` interface across every supported DEX. HyperLiquid and Aster are at `1.1.1` on NuGet (both REST + WebSocket + EIP-712 signing with pre-flight validation, retry policy, gap recovery). dYdX v4 implements the same surface end-to-end in tree (full Cosmos SDK signing stack: BIP-39 → bech32 → protobuf TxRaw → REST broadcast); publishes to NuGet once the testnet order-broadcast verification goes green. Methods grouped by entity (Markets, Orders, Positions, Trades, Account, Transfers, Streams). `decimal` for money; `IAsyncEnumerable<T>` for streams; typed exceptions.
 
 ## Documentation
 

@@ -37,8 +37,12 @@ Coverage summary:
   domain. Pre-flight validator wired to `/fapi/v3/exchangeInfo` filters (PRICE_FILTER /
   LOT_SIZE / MIN_NOTIONAL). WebSocket: Binance-style multiplex (market + listenKey-bound
   user streams with 30-min keepalive).
-- **dYdX v4** scaffold — Indexer REST reads + public WebSocket streams work end-to-end
-  against live mainnet. Cosmos SDK transaction signing for writes is pending Phase 7.2.
+- **dYdX v4** — full Cosmos SDK signing pipeline in tree. Indexer REST + public WebSocket +
+  signed Indexer reads + Cosmos transaction assembly (BIP-39 → bech32 → protobuf `TxRaw` →
+  REST broadcast) all wired. Address derivation + account-query side verified end-to-end
+  against the live testnet validator. Order-broadcast verification awaits a funded testnet
+  wallet — see [CHANGELOG](CHANGELOG.md#unreleased) for run instructions. NuGet release
+  (`EasyTrading.Dydx 1.2.0`) follows once verified.
 
 **Tests:** 125 unit + 14 integration (live mainnet across HL, Aster, dYdX), all green.
 

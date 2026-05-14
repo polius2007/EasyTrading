@@ -5,7 +5,7 @@ alwaysApply: true
 
 # EasyTrading
 
-Multi-DEX trading client for .NET (HyperLiquid live; Aster + dYdX v4 planned). See `AGENTS.md` for full guidance.
+Multi-DEX trading client for .NET. HyperLiquid + Aster are live on NuGet (both `1.1.1`); dYdX v4 is in tree with the full Cosmos SDK signing stack and awaits a funded-wallet test before NuGet release. See `AGENTS.md` for full guidance.
 
 ## Status
 
