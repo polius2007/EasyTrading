@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1-alpha.1] — Phase 3.1: complete HyperLiquid Exchange write surface
+
+### Added — all remaining write methods now hit the real Exchange endpoint
+
+- **Orders**:
+  - `ModifyAsync` / `ModifyBatchAsync` — `modify` / `batchModify` L1 actions. Fetches the existing order to fill in side / type / TIF before sending; you only need to supply the new price / size.
+  - `PlaceTwapAsync` / `CancelTwapAsync` — `twapOrder` / `twapCancel` L1 actions.
+- **Positions**:
+  - `AddMarginAsync` / `ReduceMarginAsync` — `updateIsolatedMargin` L1 action. Reads the position first to determine direction.
+- **Transfers** (all user-signed unless noted):
+  - `WithdrawAsync` — `withdraw3` (L1 → bridge).
+  - `TransferUsdAsync` — `usdSend` (core USDC).
+  - `TransferTokenAsync` — `spotSend` (any spot token).
+  - `SpotToPerpAsync` / `PerpToSpotAsync` — `usdClassTransfer`.
+  - `ToSubAccountAsync` — `subAccountTransfer` (action-signed L1).
+- **Account**:
+  - `ApproveAgentAsync` — user-signed `approveAgent` action.
+- **Vaults**:
+  - `DepositAsync` / `WithdrawAsync` — `vaultTransfer` L1 action.
+- **Staking**:
+  - `DepositAsync` / `WithdrawAsync` — `cDeposit` / `cWithdraw` L1 actions.
+  - `DelegateAsync` / `UndelegateAsync` — `tokenDelegate` L1 action.
+- **Auto-approve builder** — every order action runs the builder approval gate first time per `(user, builder)`. If `maxBuilderFee` is below the required wire rate, a user-signed `approveBuilderFee` is sent transparently; subsequent orders skip the check. In-process cache, no extra round-trip after the first call.
+
+### Changed
+- `HlAccount`, `HlTransfers`, `HlVaults`, `HlStaking` all now receive `HlExchangeClient` via constructor; `HyperLiquidClient` wires it through.
+
+### Notes
+- Test count holds at 58. All Phase-2/3.0 functionality unchanged.
+- Write methods are **still alpha** — math is correct on paper; full validation requires a testnet wallet (Phase 4 will add automated testnet integration tests). When you first try a live trade, do it on testnet with a small amount.
+
 ## [0.3.0-alpha.1] — Phase 3.0: HyperLiquid Exchange endpoint, EIP-712 signing, core trading writes
 
 ### Added

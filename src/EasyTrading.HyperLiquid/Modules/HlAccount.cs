@@ -4,8 +4,11 @@ using EasyTrading.HyperLiquid.Infrastructure;
 
 namespace EasyTrading.HyperLiquid.Modules;
 
-/// <summary>HyperLiquid implementation of <see cref="IAccount"/> backed by the Info endpoint.</summary>
-internal sealed class HlAccount(HlInfoClient info, HyperLiquidClientOptions options) : IAccount
+/// <summary>HyperLiquid implementation of <see cref="IAccount"/> backed by the Info endpoint and (for writes) the Exchange endpoint.</summary>
+internal sealed class HlAccount(
+    HlInfoClient info,
+    HlExchangeClient exchange,
+    HyperLiquidClientOptions options) : IAccount
 {
     public async Task<AccountState> GetStateAsync(CancellationToken ct = default)
     {
@@ -63,15 +66,35 @@ internal sealed class HlAccount(HlInfoClient info, HyperLiquidClientOptions opti
         return HlMapper.Map(raw);
     }
 
-    /// <summary>Phase 3 — agent approval requires EIP-712 signing of the <c>approveAgent</c> action.</summary>
-    public Task ApproveAgentAsync(string agentAddress, string? name = null, CancellationToken ct = default)
-        => Task.FromException(new NotImplementedException(HyperLiquidClient.WriteOpPhase3Message));
+    /// <summary>
+    /// Approves an agent / API wallet on the master account. User-signed EIP-712 action
+    /// (<c>ApproveAgent</c>, domain <c>HyperliquidSignTransaction</c>).
+    /// </summary>
+    public async Task ApproveAgentAsync(string agentAddress, string? name = null, CancellationToken ct = default)
+    {
+        var nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var action = new HlMap()
+            .Add("type", "approveAgent")
+            .Add("agentAddress", agentAddress.ToLowerInvariant())
+            .Add("agentName", name ?? string.Empty)
+            .Add("nonce", nonce);
+
+        var schema = new (string Name, string Type)[]
+        {
+            ("hyperliquidChain", "string"),
+            ("agentAddress",     "address"),
+            ("agentName",        "string"),
+            ("nonce",            "uint64"),
+        };
+
+        await exchange.SendUserAsync(action, "ApproveAgent", schema, ct).ConfigureAwait(false);
+    }
 
     /// <summary>HyperLiquid does not expose a read endpoint to enumerate approved agents.</summary>
     public Task<IReadOnlyList<AgentInfo>> GetApprovedAgentsAsync(CancellationToken ct = default)
         => Task.FromException<IReadOnlyList<AgentInfo>>(new NotSupportedException(
             "HyperLiquid does not provide a read endpoint to enumerate approved agents. "
-            + "Track them client-side after calling ApproveAgentAsync (Phase 3)."));
+            + "Track them client-side after calling ApproveAgentAsync."));
 
     private string RequireUser() => options.Credentials?.MasterAddress
         ?? throw new AuthenticationException(

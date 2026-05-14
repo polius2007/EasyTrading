@@ -13,12 +13,12 @@ namespace EasyTrading.HyperLiquid;
 /// </summary>
 public sealed class HyperLiquidClient : IHyperLiquidExchange
 {
-    /// <summary>Message used by write-side operations that still land in Phase 3.1 (user-signed actions: transfers, withdrawals, approvals, vault deposits, staking).</summary>
+    /// <summary>Message used by methods that still land in a follow-up phase.</summary>
     internal const string WriteOpPhase31Message =
-        "This HyperLiquid write operation (user-signed action) lands in Phase 3.1. "
+        "This HyperLiquid operation is being filled in. "
         + "See https://github.com/polius2007/EasyTrading/blob/main/CHANGELOG.md";
 
-    /// <summary>Back-compat alias for modules that still reference the Phase-2 constant name. Points at the Phase 3.1 message.</summary>
+    /// <summary>Back-compat alias used by stubs that haven't migrated to the newer constant name yet.</summary>
     internal const string WriteOpPhase3Message = WriteOpPhase31Message;
 
     /// <summary>Message used by streaming methods, which land in Phase 4 (WebSocket).</summary>
@@ -69,11 +69,11 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
         Orders    = new HlOrders(info, exchange, _metaCache, _options);
         Positions = new HlPositions(info, exchange, _metaCache, _options);
         Trades    = new HlTrades(info, _options);
-        Account   = new HlAccount(info, _options);
-        Transfers = new HlTransfers();
+        Account   = new HlAccount(info, exchange, _options);
+        Transfers = new HlTransfers(exchange, _options);
         Streams   = new HlStreams();
-        Vaults    = new HlVaults(info, _options);
-        Staking   = new HlStaking(info, _options);
+        Vaults    = new HlVaults(info, exchange, _options);
+        Staking   = new HlStaking(info, exchange, _options);
     }
 
     private static HttpClient CreateHttpClient(HyperLiquidClientOptions options)

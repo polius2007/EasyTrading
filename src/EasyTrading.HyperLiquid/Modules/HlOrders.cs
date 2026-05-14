@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text.Json;
 using EasyTrading.Abstractions;
@@ -13,6 +14,10 @@ internal sealed class HlOrders(
     HlMetaCache meta,
     HyperLiquidClientOptions options) : IOrders
 {
+    // In-memory cache: which (user, builder) pairs have already been approved this process.
+    // Avoids a per-order maxBuilderFee round-trip after the first.
+    private static readonly ConcurrentDictionary<string, bool> _builderApproved = new();
+
     // ─── Read methods (Phase 2) ──────────────────────────────────────────────
 
     public async Task<IReadOnlyList<Order>> GetOpenAsync(string? symbol = null, CancellationToken ct = default)
@@ -63,7 +68,7 @@ internal sealed class HlOrders(
         return HlMapper.Map(raw.Order.Order, HlMapper.ParseOrderStatus(raw.Order.Status), raw.Order.StatusTimestamp);
     }
 
-    // ─── Write methods (Phase 3) ─────────────────────────────────────────────
+    // ─── Place ───────────────────────────────────────────────────────────────
 
     public async Task<PlaceOrderResult> PlaceAsync(OrderRequest request, CancellationToken ct = default)
     {
@@ -74,7 +79,7 @@ internal sealed class HlOrders(
             .Add("type", "order")
             .Add("orders", new object[] { orderWire })
             .Add("grouping", "na");
-        AttachBuilderFee(action, request.BuilderFeeOverride);
+        await AttachBuilderFeeAsync(action, request.BuilderFeeOverride, ct).ConfigureAwait(false);
 
         var response = await exchange.SendL1Async(action, expiresAfter: null, ct).ConfigureAwait(false);
         return ParseOrderStatus(response.GetProperty("data").GetProperty("statuses")[0], request.ClientOrderId);
@@ -96,7 +101,7 @@ internal sealed class HlOrders(
             .Add("type", "order")
             .Add("orders", wires)
             .Add("grouping", "na");
-        AttachBuilderFee(action, perOrderOverride: null);
+        await AttachBuilderFeeAsync(action, perOrderOverride: null, ct).ConfigureAwait(false);
 
         var response = await exchange.SendL1Async(action, expiresAfter: null, ct).ConfigureAwait(false);
 
@@ -121,14 +126,12 @@ internal sealed class HlOrders(
         bool reduceOnly = false, string? clientOrderId = null,
         CancellationToken ct = default)
     {
-        // HyperLiquid has no native market order type — we send an IOC limit with 5% slippage
-        // from the current mid price, matching the Python reference SDK's PlaceMarketOrder helper.
         var mids = await info.PostAsync<Dictionary<string, string>>(new { type = "allMids" }, ct).ConfigureAwait(false);
         if (!mids.TryGetValue(symbol, out var midStr))
             throw new ExchangeApiException($"Cannot place market order on '{symbol}': mid price unavailable.");
 
         var mid = decimal.Parse(midStr, NumberStyles.Float, CultureInfo.InvariantCulture);
-        const decimal slippage = 0.05m; // 5%
+        const decimal slippage = 0.05m;
         var price = side == OrderSide.Buy ? mid * (1m + slippage) : mid * (1m - slippage);
 
         return await PlaceAsync(new OrderRequest(
@@ -146,6 +149,87 @@ internal sealed class HlOrders(
             OrderType: isMarket ? OrderType.StopMarket : OrderType.StopLimit,
             Size: size, Price: triggerPrice, TriggerPrice: triggerPrice,
             ReduceOnly: reduceOnly), ct);
+
+    // ─── Modify ──────────────────────────────────────────────────────────────
+
+    public async Task<ModifyResult> ModifyAsync(ModifyRequest request, CancellationToken ct = default)
+    {
+        if (request.OrderId is null && request.ClientOrderId is null)
+            throw new InvalidOrderException("ModifyRequest needs OrderId or ClientOrderId.");
+
+        var existing = request.OrderId.HasValue
+            ? await GetAsync(request.OrderId.Value, ct).ConfigureAwait(false)
+            : await GetByClientIdAsync(request.ClientOrderId!, ct).ConfigureAwait(false);
+
+        if (existing is null)
+            return new ModifyResult(0, false, "Order not found or no longer open.");
+
+        var assetId = await meta.GetAssetIdAsync(request.Symbol, ct).ConfigureAwait(false);
+        var newOrderWire = BuildModifyOrderWire(assetId, existing, request);
+
+        var action = new HlMap()
+            .Add("type", "modify")
+            .Add("oid", existing.OrderId)
+            .Add("order", newOrderWire);
+
+        var response = await exchange.SendL1Async(action, null, ct).ConfigureAwait(false);
+        var status = response.GetProperty("data").GetProperty("statuses")[0];
+
+        if (status.TryGetProperty("resting", out var resting))
+            return new ModifyResult(resting.GetProperty("oid").GetInt64(), true, null);
+        if (status.TryGetProperty("error", out var err))
+            return new ModifyResult(existing.OrderId, false, err.GetString());
+        return new ModifyResult(existing.OrderId, true, null);
+    }
+
+    public async Task<BatchModifyResult> ModifyBatchAsync(IReadOnlyList<ModifyRequest> requests, CancellationToken ct = default)
+    {
+        if (requests.Count == 0)
+            return new BatchModifyResult(Array.Empty<ModifyResult>());
+
+        var modifies = new List<object>(requests.Count);
+        var oids = new List<long>(requests.Count);
+
+        foreach (var r in requests)
+        {
+            if (r.OrderId is null && r.ClientOrderId is null)
+                throw new InvalidOrderException("ModifyRequest needs OrderId or ClientOrderId.");
+            var existing = r.OrderId.HasValue
+                ? await GetAsync(r.OrderId.Value, ct).ConfigureAwait(false)
+                : await GetByClientIdAsync(r.ClientOrderId!, ct).ConfigureAwait(false);
+
+            if (existing is null)
+                throw new InvalidOrderException($"Cannot modify: order '{r.OrderId?.ToString(CultureInfo.InvariantCulture) ?? r.ClientOrderId}' not found.");
+
+            var assetId = await meta.GetAssetIdAsync(r.Symbol, ct).ConfigureAwait(false);
+            modifies.Add(new HlMap()
+                .Add("oid", existing.OrderId)
+                .Add("order", BuildModifyOrderWire(assetId, existing, r)));
+            oids.Add(existing.OrderId);
+        }
+
+        var action = new HlMap()
+            .Add("type", "batchModify")
+            .Add("modifies", modifies);
+
+        var response = await exchange.SendL1Async(action, null, ct).ConfigureAwait(false);
+        var statuses = response.GetProperty("data").GetProperty("statuses");
+
+        var results = new List<ModifyResult>(requests.Count);
+        for (var i = 0; i < statuses.GetArrayLength(); i++)
+        {
+            var s = statuses[i];
+            if (s.TryGetProperty("resting", out var resting))
+                results.Add(new ModifyResult(resting.GetProperty("oid").GetInt64(), true, null));
+            else if (s.TryGetProperty("error", out var err))
+                results.Add(new ModifyResult(oids[i], false, err.GetString()));
+            else
+                results.Add(new ModifyResult(oids[i], true, null));
+        }
+        return new BatchModifyResult(results);
+    }
+
+    // ─── Cancel ──────────────────────────────────────────────────────────────
 
     public async Task<CancelResult> CancelAsync(string symbol, long orderId, CancellationToken ct = default)
     {
@@ -227,22 +311,59 @@ internal sealed class HlOrders(
         await exchange.SendL1Async(action, null, ct).ConfigureAwait(false);
     }
 
-    // ─── Phase 3.1 (TWAP, Modify) — coming next ─────────────────────────────
+    // ─── TWAP ────────────────────────────────────────────────────────────────
 
-    /// <summary>Phase 3.1 — modify currently requires the full new order spec; use <see cref="CancelAsync"/> + <see cref="PlaceAsync"/> as a workaround.</summary>
-    public Task<ModifyResult> ModifyAsync(ModifyRequest request, CancellationToken ct = default)
-        => Task.FromException<ModifyResult>(new NotImplementedException(HyperLiquidClient.WriteOpPhase31Message));
+    public async Task<TwapResult> PlaceTwapAsync(TwapRequest request, CancellationToken ct = default)
+    {
+        var assetId = await meta.GetAssetIdAsync(request.Symbol, ct).ConfigureAwait(false);
 
-    public Task<BatchModifyResult> ModifyBatchAsync(IReadOnlyList<ModifyRequest> requests, CancellationToken ct = default)
-        => Task.FromException<BatchModifyResult>(new NotImplementedException(HyperLiquidClient.WriteOpPhase31Message));
+        var twapWire = new HlMap()
+            .Add("a", assetId)
+            .Add("b", request.Side == OrderSide.Buy)
+            .Add("s", FloatToWire(request.Size))
+            .Add("r", request.ReduceOnly)
+            .Add("m", request.DurationMinutes)
+            .Add("t", request.Randomize);
 
-    public Task<TwapResult> PlaceTwapAsync(TwapRequest request, CancellationToken ct = default)
-        => Task.FromException<TwapResult>(new NotImplementedException(HyperLiquidClient.WriteOpPhase31Message));
+        var action = new HlMap()
+            .Add("type", "twapOrder")
+            .Add("twap", twapWire);
 
-    public Task<CancelResult> CancelTwapAsync(string symbol, long twapId, CancellationToken ct = default)
-        => Task.FromException<CancelResult>(new NotImplementedException(HyperLiquidClient.WriteOpPhase31Message));
+        var response = await exchange.SendL1Async(action, null, ct).ConfigureAwait(false);
+        var status = response.GetProperty("data").GetProperty("status");
 
-    // ─── action builders ─────────────────────────────────────────────────────
+        if (status.TryGetProperty("running", out var running))
+        {
+            var twapId = running.GetProperty("twapId").GetInt64();
+            return new TwapResult(twapId, true, null);
+        }
+        if (status.TryGetProperty("error", out var err))
+            return new TwapResult(0, false, err.GetString());
+
+        return new TwapResult(0, true, null);
+    }
+
+    public async Task<CancelResult> CancelTwapAsync(string symbol, long twapId, CancellationToken ct = default)
+    {
+        var assetId = await meta.GetAssetIdAsync(symbol, ct).ConfigureAwait(false);
+
+        var action = new HlMap()
+            .Add("type", "twapCancel")
+            .Add("a", assetId)
+            .Add("t", twapId);
+
+        var response = await exchange.SendL1Async(action, null, ct).ConfigureAwait(false);
+        var status = response.GetProperty("data").GetProperty("status");
+
+        if (status.ValueKind == JsonValueKind.String && string.Equals(status.GetString(), "success", StringComparison.OrdinalIgnoreCase))
+            return new CancelResult(twapId, true, null);
+        if (status.TryGetProperty("error", out var err))
+            return new CancelResult(twapId, false, err.GetString());
+
+        return new CancelResult(twapId, true, null);
+    }
+
+    // ─── action wire builders ────────────────────────────────────────────────
 
     private static HlMap BuildOrderWire(int assetId, OrderRequest r)
     {
@@ -256,6 +377,25 @@ internal sealed class HlOrders(
 
         if (!string.IsNullOrEmpty(r.ClientOrderId))
             wire.Add("c", r.ClientOrderId);
+
+        return wire;
+    }
+
+    private static HlMap BuildModifyOrderWire(int assetId, Order existing, ModifyRequest req)
+    {
+        var newPrice = req.NewPrice ?? existing.Price ?? 0m;
+        var newSize  = req.NewSize  ?? (existing.Size - existing.FilledSize);
+
+        var wire = new HlMap()
+            .Add("a", assetId)
+            .Add("b", existing.Side == OrderSide.Buy)
+            .Add("p", FloatToWire(newPrice))
+            .Add("s", FloatToWire(newSize))
+            .Add("r", existing.ReduceOnly)
+            .Add("t", OrderTypeToWire(existing.OrderType, existing.TimeInForce, existing.TriggerPrice));
+
+        if (!string.IsNullOrEmpty(existing.ClientOrderId))
+            wire.Add("c", existing.ClientOrderId);
 
         return wire;
     }
@@ -295,7 +435,7 @@ internal sealed class HlOrders(
         TimeInForce.Gtc => "Gtc",
         TimeInForce.Ioc => "Ioc",
         TimeInForce.Alo => "Alo",
-        TimeInForce.Fok => "Ioc", // HyperLiquid has no FOK; closest is IOC.
+        TimeInForce.Fok => "Ioc", // HL has no FOK; closest is IOC.
         _ => "Gtc",
     };
 
@@ -306,7 +446,9 @@ internal sealed class HlOrders(
         return s == "-0" ? "0" : s;
     }
 
-    private void AttachBuilderFee(HlMap action, BuilderFee? perOrderOverride)
+    // ─── builder fee (auto-attach + auto-approve) ────────────────────────────
+
+    private async Task AttachBuilderFeeAsync(HlMap action, BuilderFee? perOrderOverride, CancellationToken ct)
     {
         var fee = perOrderOverride
             ?? options.BuilderFee
@@ -315,13 +457,70 @@ internal sealed class HlOrders(
         if (fee.FeeRate <= 0m)
             return; // explicit opt-out
 
-        // HyperLiquid's `f` field is in tenths of a basis point (1 tenth = 0.00001).
         var wireFee = (int)Math.Round(fee.FeeRate * 100_000m, MidpointRounding.ToEven);
         if (wireFee <= 0) return;
+
+        // Make sure the user has approved this builder once. Cached in-process; first call may
+        // send an approveBuilderFee transaction transparently.
+        await EnsureBuilderApprovedAsync(fee, wireFee, ct).ConfigureAwait(false);
 
         action.Add("builder", new HlMap()
             .Add("b", fee.BuilderAddress.ToLowerInvariant())
             .Add("f", wireFee));
+    }
+
+    private async Task EnsureBuilderApprovedAsync(BuilderFee fee, int requiredWireFee, CancellationToken ct)
+    {
+        var user = options.Credentials?.MasterAddress;
+        if (user is null) return; // no creds → no signing happens, error surfaces later from exchange
+
+        var cacheKey = $"{user.ToLowerInvariant()}:{fee.BuilderAddress.ToLowerInvariant()}";
+        if (_builderApproved.TryGetValue(cacheKey, out var ok) && ok)
+            return;
+
+        // maxBuilderFee returns the currently-approved tenths-of-bp ceiling for (user, builder).
+        decimal currentMax;
+        try
+        {
+            currentMax = await info.PostAsync<decimal>(new
+            {
+                type = "maxBuilderFee",
+                user,
+                builder = fee.BuilderAddress.ToLowerInvariant(),
+            }, ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            // If the check fails, fall through and attempt to approve.
+            currentMax = 0m;
+        }
+
+        if ((int)currentMax >= requiredWireFee)
+        {
+            _builderApproved[cacheKey] = true;
+            return;
+        }
+
+        // Send a user-signed approveBuilderFee action with the required rate as percent string.
+        var nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var maxFeeRatePct = (fee.FeeRate * 100m).ToString("0.######", CultureInfo.InvariantCulture) + "%";
+
+        var approve = new HlMap()
+            .Add("type", "approveBuilderFee")
+            .Add("maxFeeRate", maxFeeRatePct)
+            .Add("builder", fee.BuilderAddress.ToLowerInvariant())
+            .Add("nonce", nonce);
+
+        var schema = new (string Name, string Type)[]
+        {
+            ("hyperliquidChain", "string"),
+            ("maxFeeRate",        "string"),
+            ("builder",           "address"),
+            ("nonce",             "uint64"),
+        };
+
+        await exchange.SendUserAsync(approve, "ApproveBuilderFee", schema, ct).ConfigureAwait(false);
+        _builderApproved[cacheKey] = true;
     }
 
     // ─── response parsing ────────────────────────────────────────────────────
@@ -343,9 +542,7 @@ internal sealed class HlOrders(
         }
 
         if (status.TryGetProperty("error", out var error))
-        {
             return new PlaceOrderResult(0, clientOrderId, OrderStatus.Rejected, 0m, null, error.GetString());
-        }
 
         return new PlaceOrderResult(0, clientOrderId, OrderStatus.Pending, 0m, null, status.GetRawText());
     }
@@ -357,10 +554,8 @@ internal sealed class HlOrders(
             var s = status.GetString();
             return new CancelResult(orderId, string.Equals(s, "success", StringComparison.OrdinalIgnoreCase), null);
         }
-
         if (status.TryGetProperty("error", out var err))
             return new CancelResult(orderId, false, err.GetString());
-
         return new CancelResult(orderId, true, null);
     }
 

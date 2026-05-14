@@ -66,20 +66,20 @@ public sealed class HyperLiquidClientSmokeTests
     }
 
     [Fact]
-    public async Task Phase_3_1_user_signed_writes_still_throw_NotImplementedException()
+    public async Task Phase_3_1_writes_without_credentials_throw_AuthenticationException()
     {
         var client = new HyperLiquidClient(new HyperLiquidClientOptions());
 
-        // User-signed actions (transfers, withdrawals, agent / builder approvals, vault deposits, staking)
-        // require Phase 3.1's user-signed EIP-712 dispatch. They still raise NotImplementedException.
-        await Assert.ThrowsAsync<NotImplementedException>(() => client.Transfers.SpotToPerpAsync(100m));
-        await Assert.ThrowsAsync<NotImplementedException>(() => client.Account.ApproveAgentAsync("0xagent"));
-        await Assert.ThrowsAsync<NotImplementedException>(() => client.Vaults.DepositAsync("0xvault", 1m));
-        await Assert.ThrowsAsync<NotImplementedException>(() => client.Staking.DelegateAsync("0xvalidator", 1m));
-
-        // TWAP / Modify also still pending.
-        await Assert.ThrowsAsync<NotImplementedException>(() => client.Orders.PlaceTwapAsync(
-            new EasyTrading.Abstractions.Models.TwapRequest("BTC", OrderSide.Buy, 0.01m, 30)));
+        // All write methods (user-signed transfers, vaults, staking, agent approval) now reach
+        // the Exchange-endpoint signing path. Without credentials they raise AuthenticationException
+        // synchronously, before any network call.
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Transfers.SpotToPerpAsync(100m));
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Transfers.TransferUsdAsync("0xdest", 100m));
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Transfers.WithdrawAsync("0xdest", 100m));
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Account.ApproveAgentAsync("0xagent"));
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Vaults.DepositAsync("0xvault", 1m));
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Staking.DepositAsync(1m));
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Staking.DelegateAsync("0xvalidator", 1m));
     }
 
     [Fact]

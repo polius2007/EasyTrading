@@ -37,6 +37,37 @@ internal sealed class HlPositions(
         await exchange.SendL1Async(action, expiresAfter: null, ct).ConfigureAwait(false);
     }
 
+    public Task AddMarginAsync(string symbol, decimal amount, CancellationToken ct = default)
+        => UpdateIsolatedMarginAsync(symbol, amount, ct);
+
+    public Task ReduceMarginAsync(string symbol, decimal amount, CancellationToken ct = default)
+        => UpdateIsolatedMarginAsync(symbol, -amount, ct);
+
+    private async Task UpdateIsolatedMarginAsync(string symbol, decimal deltaUsdc, CancellationToken ct)
+    {
+        var user = RequireUser();
+        // We need the position's direction to fill the `isBuy` field.
+        var state = await info.PostAsync<ClearinghouseStateRaw>(new { type = "clearinghouseState", user }, ct).ConfigureAwait(false);
+        var position = state.AssetPositions
+            .Select(ap => ap.Position)
+            .FirstOrDefault(p => string.Equals(p.Coin, symbol, StringComparison.OrdinalIgnoreCase));
+
+        if (position is null || position.Szi == 0m)
+            throw new InvalidOrderException($"Cannot adjust margin on '{symbol}': no open position.");
+
+        var assetId = await meta.GetAssetIdAsync(symbol, ct).ConfigureAwait(false);
+        // ntli is delta in 6-decimal USDC (positive = add margin, negative = remove).
+        var ntli = (long)decimal.Round(deltaUsdc * 1_000_000m, MidpointRounding.ToEven);
+
+        var action = new HlMap()
+            .Add("type", "updateIsolatedMargin")
+            .Add("asset", assetId)
+            .Add("isBuy", position.Szi > 0m)
+            .Add("ntli", ntli);
+
+        await exchange.SendL1Async(action, null, ct).ConfigureAwait(false);
+    }
+
     public async Task<PlaceOrderResult> CloseAsync(string symbol, CancellationToken ct = default)
     {
         var user = RequireUser();
@@ -54,13 +85,9 @@ internal sealed class HlPositions(
                 ErrorMessage: $"No open position on '{symbol}' to close.");
         }
 
-        // Close with a reduce-only IOC market order in the opposite direction.
         var size = Math.Abs(position.Szi);
         var side = position.Szi > 0 ? OrderSide.Sell : OrderSide.Buy;
 
-        // Delegate to the Orders module's market path via a fresh OrderRequest. We can't easily
-        // reach the public IOrders surface from here, so we reimplement the same IOC-with-slippage
-        // logic against the live mid price.
         var mids = await info.PostAsync<Dictionary<string, string>>(new { type = "allMids" }, ct).ConfigureAwait(false);
         if (!mids.TryGetValue(symbol, out var midStr))
             return new PlaceOrderResult(0, null, OrderStatus.Rejected, 0m, null, $"Mid price unavailable for {symbol}.");
@@ -82,7 +109,7 @@ internal sealed class HlPositions(
             .Add("type", "order")
             .Add("orders", new object[] { orderWire })
             .Add("grouping", "na");
-        AttachBuilderFee(action);
+        AttachBuilderFeeStatic(action, options);
 
         var response = await exchange.SendL1Async(action, null, ct).ConfigureAwait(false);
         var status = response.GetProperty("data").GetProperty("statuses")[0];
@@ -96,9 +123,7 @@ internal sealed class HlPositions(
         }
 
         if (status.TryGetProperty("resting", out var resting))
-        {
             return new PlaceOrderResult(resting.GetProperty("oid").GetInt64(), null, OrderStatus.Open, 0m, null, null);
-        }
 
         if (status.TryGetProperty("error", out var err))
             return new PlaceOrderResult(0, null, OrderStatus.Rejected, 0m, null, err.GetString());
@@ -106,15 +131,7 @@ internal sealed class HlPositions(
         return new PlaceOrderResult(0, null, OrderStatus.Pending, 0m, null, status.GetRawText());
     }
 
-    // Margin tweaks land in Phase 3.1 — they require a precise understanding of HL's
-    // `updateIsolatedMargin` payload (ntli direction depending on side, etc.).
-    public Task AddMarginAsync(string symbol, decimal amount, CancellationToken ct = default)
-        => Task.FromException(new NotImplementedException(HyperLiquidClient.WriteOpPhase31Message));
-
-    public Task ReduceMarginAsync(string symbol, decimal amount, CancellationToken ct = default)
-        => Task.FromException(new NotImplementedException(HyperLiquidClient.WriteOpPhase31Message));
-
-    private void AttachBuilderFee(HlMap action)
+    private static void AttachBuilderFeeStatic(HlMap action, HyperLiquidClientOptions options)
     {
         var fee = options.BuilderFee
             ?? new BuilderFee(HlBuilderDefaults.BuilderAddress, HlBuilderDefaults.FeeRate);
