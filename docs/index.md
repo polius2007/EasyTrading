@@ -17,12 +17,12 @@ This site is the **API reference**, auto-generated from the XML doc-comments on 
 | Read balances / fees / portfolio             | `EasyTrading.Abstractions.IAccount`                                          |
 | Withdraw / transfer                          | `EasyTrading.Abstractions.ITransfers`                                        |
 | Subscribe to WebSocket streams               | `EasyTrading.Abstractions.IStreams`                                          |
-| HyperLiquid vaults / staking / builder fees  | `EasyTrading.HyperLiquid.IVaults`, `IStaking`, `IBuilder`                    |
+| HyperLiquid vaults / staking                 | `EasyTrading.HyperLiquid.IVaults`, `EasyTrading.HyperLiquid.IStaking`        |
 | Wire everything up through DI                | `EasyTrading.HyperLiquid.ServiceCollectionExtensions`                        |
 
 ## Status
 
-🚧 Pre-alpha — Phase 1 (scaffolding + full public surface) is in place. The public API compiles end-to-end; real exchange calls land in Phase 2+. See the [roadmap on GitHub](https://github.com/polius2007/EasyTrading#roadmap).
+🚧 Alpha — Phase 2 (HyperLiquid Info endpoint) is live; all market-data and account-state reads work against live mainnet. Order placement, transfers, and WebSocket streaming land in Phases 3 and 4. See the [roadmap on GitHub](https://github.com/polius2007/EasyTrading#roadmap).
 
 ## License
 

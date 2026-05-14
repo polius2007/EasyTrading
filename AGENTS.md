@@ -8,7 +8,7 @@ EasyTrading is a multi-DEX trading client for .NET. The same `IExchangeClient` i
 
 - **Home**: [easytrading.pw](https://easytrading.pw)
 - **Source**: [github.com/polius2007/EasyTrading](https://github.com/polius2007/EasyTrading)
-- **NuGet**: `EasyTrading.Abstractions`, `EasyTrading.Core`, `EasyTrading.HyperLiquid`, `EasyTrading.Broker` (more planned)
+- **NuGet**: `EasyTrading.Abstractions`, `EasyTrading.Core`, `EasyTrading.HyperLiquid` (more planned)
 - **License**: MIT
 
 ## Core conventions (apply always)
@@ -17,7 +17,7 @@ EasyTrading is a multi-DEX trading client for .NET. The same `IExchangeClient` i
 2. **`decimal` for money.** Never use `double` or `float` for prices, sizes, fees, balances, or PnL.
 3. **`CancellationToken ct = default` last.** Every async method takes a cancellation token as its last parameter, with a default value.
 4. **`IAsyncEnumerable<T>` for streams.** WebSocket subscriptions are async iterators — use `await foreach`.
-5. **Check `Capabilities` before optional features.** Probe `client.Capabilities.HasFlag(ExchangeCapabilities.X)` before calling TWAP, vaults, builder fees, scheduled cancel, etc.
+5. **Check `Capabilities` before optional features.** Probe `client.Capabilities.HasFlag(ExchangeCapabilities.X)` before calling TWAP, vaults, scheduled cancel, etc.
 6. **Typed exceptions.** Catch one of: `RateLimitException`, `InsufficientFundsException`, `InvalidOrderException`, `AuthenticationException`, `SigningException`, or the base `ExchangeApiException`. Don't catch raw `Exception`.
 
 ## Recommended registration (DI)
@@ -40,7 +40,7 @@ services.AddEasyTrading()
 
 Then inject:
 
-- `IHyperLiquidExchange` — HL-specific surface (adds `Vaults`, `Staking`, `Builder`)
+- `IHyperLiquidExchange` — HL-specific surface (adds `Vaults`, `Staking`)
 - `IExchangeClient` — cross-DEX surface (works for HL today, Aster/dYdX later)
 
 ## Common patterns
@@ -92,10 +92,10 @@ await foreach (var fill in ex.Streams.MyFillsAsync(ct))
 
 ### Subscribe to order book
 ```csharp
-await foreach (var book in ex.Streams.OrderBookAsync("BTC", depth: 20, ct: ct))
+await foreach (var update in ex.Streams.OrderBookAsync("BTC", depth: 20, ct: ct))
 {
-    var bestBid = book.Bids[0].Price;
-    var bestAsk = book.Asks[0].Price;
+    var bestBid = update.Bids[0].Price;
+    var bestAsk = update.Asks[0].Price;
 }
 ```
 
@@ -106,17 +106,13 @@ await foreach (var book in ex.Streams.OrderBookAsync("BTC", depth: 20, ct: ct))
 - ❌ Forgetting `CancellationToken` in long-running calls or `await foreach` loops.
 - ❌ Catching raw `Exception`. Catch typed: `RateLimitException`, `InsufficientFundsException`, …
 - ❌ Holding the **master** account's private key in production. Approve an agent wallet via `IAccount.ApproveAgentAsync` and use that key instead — agents can be revoked without rotating the master key.
-- ❌ Calling HL-only features (`Vaults`, `Staking`, `Builder`) on `IExchangeClient` — cast to `IHyperLiquidExchange` or inject that directly.
+- ❌ Calling HL-only features (`Vaults`, `Staking`) on `IExchangeClient` — cast to `IHyperLiquidExchange` or inject that directly.
 - ❌ Assuming `Capabilities` are universal — check with `HasFlag` first.
-
-## Builder fees / rebates
-
-The library routes orders through a configurable builder address for rebate revenue (via `EasyTrading.Broker`). To opt out, omit `EasyTrading.Broker` from your installation, or override `OrderRequest.BuilderFeeOverride` explicitly per order.
 
 ## Key types
 
 - `IExchangeClient` — top-level cross-DEX contract; exposes 7 sub-clients (Markets, Orders, Positions, Trades, Account, Transfers, Streams).
-- `IHyperLiquidExchange : IExchangeClient` — adds HL-only sub-clients (Vaults, Staking, Builder).
+- `IHyperLiquidExchange : IExchangeClient` — adds HL-only sub-clients (Vaults, Staking).
 - `Symbol` — market metadata (name, kind, tick, step, min size, max leverage).
 - `OrderRequest`, `Order`, `Fill`, `Position`, `OrderBook`, `Candle`, `AccountState` — DTOs as records.
 - `OrderSide`, `OrderType`, `TimeInForce`, `MarginMode`, `MarketKind`, `Interval`, `OrderStatus` — enums.
@@ -128,7 +124,7 @@ The library routes orders through a configurable builder address for rebate reve
 - `decimal` everywhere for money. `Async` suffix on every async. `from`/`to` for time ranges. XML doc on every public member.
 - Central package management — `PackageReference` entries must omit `Version` (versions live in `Directory.Packages.props`).
 - Commands: `dotnet build EasyTrading.slnx`, `dotnet test EasyTrading.slnx`, `dotnet run --project samples/EasyTrading.Samples.Console`.
-- Phase awareness: see [CHANGELOG.md](CHANGELOG.md). Phase 1 ships scaffolding only; real exchange calls land in Phase 2+.
+- Phase awareness: see [CHANGELOG.md](CHANGELOG.md).
 
 ## Where to find more
 

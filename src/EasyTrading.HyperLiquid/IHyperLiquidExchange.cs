@@ -4,7 +4,7 @@ namespace EasyTrading.HyperLiquid;
 
 /// <summary>
 /// HyperLiquid-specific extension of <see cref="IExchangeClient"/>. Adds the HL-only surface
-/// (vaults, staking, builder fees) on top of the cross-DEX contract.
+/// (vaults, staking) on top of the cross-DEX contract.
 /// </summary>
 /// <remarks>
 /// Register a <see cref="HyperLiquidClient"/> as both <see cref="IExchangeClient"/> and
@@ -18,7 +18,4 @@ public interface IHyperLiquidExchange : IExchangeClient
 
     /// <summary>HyperLiquid native staking — delegate / undelegate / rewards.</summary>
     IStaking Staking { get; }
-
-    /// <summary>Builder-fee management. Used by <c>EasyTrading.Broker</c> to wire rebates into the order flow.</summary>
-    IBuilder Builder { get; }
 }

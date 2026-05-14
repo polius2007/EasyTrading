@@ -10,13 +10,13 @@ EasyTrading is a unified .NET client for decentralised perpetual and spot exchan
 
 🌐 **Home:** [easytrading.pw](https://easytrading.pw)
 
-> **Status — pre-alpha.** Phase 1 (scaffolding + full public API surface) is in place. The HyperLiquid client compiles and exposes its full interface; real exchange calls land in the following phases — see the [roadmap](#roadmap).
+> **Status — alpha.** Phase 2 (HyperLiquid `Info` endpoint, read-only) is live. All market-data and account-state queries hit the real exchange. Order placement / cancellation / streaming land in Phase 3 and Phase 4 — see the [roadmap](#roadmap).
 
 ## Supported DEXes
 
 | Exchange    | Package                              | REST | WebSocket | Signing |
 |-------------|--------------------------------------|:----:|:---------:|:-------:|
-| HyperLiquid | `EasyTrading.HyperLiquid`            |  🚧  |    🚧     |   🚧    |
+| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅  |    🚧     |   🚧    |
 | Aster       | `EasyTrading.Aster` *(planned)*      |   —  |     —     |    —    |
 | dYdX v4     | `EasyTrading.Dydx` *(planned)*       |   —  |     —     |    —    |
 
@@ -26,7 +26,7 @@ EasyTrading is a unified .NET client for decentralised perpetual and spot exchan
 dotnet add package EasyTrading.HyperLiquid
 ```
 
-This single command also installs `EasyTrading.Abstractions` and `EasyTrading.Core` transitively. For builder-fee routing add `dotnet add package EasyTrading.Broker`.
+This single command also pulls `EasyTrading.Abstractions` and `EasyTrading.Core` transitively.
 
 ## Quick start
 
@@ -56,7 +56,7 @@ var exchange = app.Services.GetRequiredService<IHyperLiquidExchange>();
 var mids = await exchange.Markets.GetAllMidsAsync();
 Console.WriteLine($"BTC mid: {mids["BTC"]}");
 
-// Place a post-only limit buy
+// Place a post-only limit buy (lands in Phase 3)
 var placed = await exchange.Orders.PlaceLimitAsync(
     symbol: "BTC", side: OrderSide.Buy,
     price:  60_000m, size: 0.01m,
@@ -64,7 +64,7 @@ var placed = await exchange.Orders.PlaceLimitAsync(
 
 Console.WriteLine($"Order id: {placed.OrderId}");
 
-// Stream your own fills
+// Stream your own fills (lands in Phase 4)
 await foreach (var fill in exchange.Streams.MyFillsAsync(default))
     Console.WriteLine($"{fill.Symbol} {fill.Side} {fill.Size} @ {fill.Price}");
 ```
@@ -84,17 +84,15 @@ Methods are grouped by **entity** — all order operations live under `Orders`, 
 | `Streams`          | WebSocket subscriptions (public + user) via `IAsyncEnumerable`|
 | `Vaults` (HL only) | Vault details, deposit, withdraw                              |
 | `Staking` (HL only)| Delegate / undelegate / rewards                               |
-| `Builder` (HL only)| Builder-fee approvals (used by `EasyTrading.Broker`)          |
 
 ## Roadmap
 
 - [x] **Phase 1** — Solution scaffold, full public API surface, CI/CD, docs site
-- [ ] **Phase 2** — HyperLiquid `Info` endpoint (all read types)
-- [ ] **Phase 3** — HyperLiquid `Exchange` endpoint + EIP-712 signing
+- [x] **Phase 2** — HyperLiquid `Info` endpoint (all read types)
+- [ ] **Phase 3** — HyperLiquid `Exchange` endpoint + EIP-712 signing (order placement, transfers, leverage, …)
 - [ ] **Phase 4** — HyperLiquid WebSocket streaming
-- [ ] **Phase 5** — `EasyTrading.Broker` — builder-fee / rebate layer
-- [ ] **Phase 6** — `EasyTrading.Aster` client
-- [ ] **Phase 7** — `EasyTrading.Dydx` (dYdX v4) client
+- [ ] **Phase 5** — `EasyTrading.Aster` client
+- [ ] **Phase 6** — `EasyTrading.Dydx` (dYdX v4) client
 
 ## Documentation
 
@@ -129,14 +127,16 @@ Before publishing your first release:
 Release a new version with a single tag push:
 
 ```bash
-git tag v0.1.0-alpha.1 && git push --tags
+git tag v0.2.1-alpha.1 && git push --tags
 ```
 
 The `release.yml` workflow builds, packs, and pushes all `EasyTrading.*` packages to NuGet automatically.
 
 ## Disclaimer
 
-This software is provided "as is", without warranty of any kind. Trading derivatives carries significant risk; use at your own responsibility. The authors are not affiliated with HyperLiquid, Aster, dYdX, or any other exchange. Builder-fee routing is opt-out; see [`docs/modules/builder.md`](docs/modules/builder.md).
+This software is provided "as is", without warranty of any kind. Trading derivatives carries significant risk; use at your own responsibility. The authors are not affiliated with HyperLiquid, Aster, dYdX, or any other exchange.
+
+EasyTrading is funded by a small default builder fee on HyperLiquid orders (0.005% of notional — well below typical taker fees, and visible on-chain as a separate field on every order action). Set `HyperLiquidClientOptions.BuilderFee` to route fees elsewhere or use a zero rate to opt out.
 
 ## License
 

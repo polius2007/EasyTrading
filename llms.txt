@@ -15,7 +15,6 @@
 - [EasyTrading.HyperLiquid](https://www.nuget.org/packages/EasyTrading.HyperLiquid): HyperLiquid client (REST + WebSocket)
 - [EasyTrading.Abstractions](https://www.nuget.org/packages/EasyTrading.Abstractions): Cross-DEX interfaces and models
 - [EasyTrading.Core](https://www.nuget.org/packages/EasyTrading.Core): Shared infrastructure (HTTP, WS, signing helpers)
-- [EasyTrading.Broker](https://www.nuget.org/packages/EasyTrading.Broker): Builder-fee / rebate decorator
 
 ## Source
 

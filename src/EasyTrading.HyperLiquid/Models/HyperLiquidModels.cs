@@ -49,8 +49,3 @@ public sealed record DelegatorSummary(
 /// <param name="Amount">Reward amount in native token.</param>
 /// <param name="Time">When the reward was credited.</param>
 public sealed record Reward(string Validator, decimal Amount, DateTimeOffset Time);
-
-/// <summary>An approved builder and its maximum fee rate.</summary>
-/// <param name="BuilderAddress">Builder address.</param>
-/// <param name="MaxFeeRate">Maximum approved fee rate as a fraction (e.g. <c>0.0005</c> = 0.05%).</param>
-public sealed record BuilderApproval(string BuilderAddress, decimal MaxFeeRate);

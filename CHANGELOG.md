@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1-alpha.1] — Builder-fee handling reorganised
+
+### Changed
+- The standalone `EasyTrading.Broker` package was removed. Builder-fee routing now lives inside `EasyTrading.HyperLiquid` itself — simpler dependency graph, one fewer package to install.
+- `IBuilder` is no longer part of `IHyperLiquidExchange`'s public surface. The HL-only sub-clients are now just `Vaults` and `Staking`.
+- New internal `HlBuilderDefaults` holds the default builder address and fee rate that Phase 3's Exchange-endpoint serializer attaches to every order action.
+- New `HyperLiquidClientOptions.BuilderFee` lets callers override the default per client; per-order overrides via `OrderRequest.BuilderFeeOverride` still work.
+
+### Removed
+- `EasyTrading.Broker` project, `BrokerOptions`, `IBuilder` interface, `HlBuilder` module, `BuilderApproval` model.
+
+### Notes
+- Builder-fee handling on HyperLiquid is now built into the HyperLiquid client by default (small fraction of notional, well below typical taker fees). See [README.md § Disclaimer](README.md#disclaimer) for opt-out instructions.
+
 ## [0.2.0-alpha.1] — Phase 2: HyperLiquid Info endpoint (read-only)
 
 ### Added

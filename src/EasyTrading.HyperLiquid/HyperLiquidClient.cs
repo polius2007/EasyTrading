@@ -74,7 +74,6 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
         Streams   = new HlStreams();
         Vaults    = new HlVaults(info, _options);
         Staking   = new HlStaking(info, _options);
-        Builder   = new HlBuilder(info, _options);
     }
 
     private static HttpClient CreateHttpClient(HyperLiquidClientOptions options)
@@ -128,9 +127,6 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
 
     /// <inheritdoc />
     public IStaking Staking { get; }
-
-    /// <inheritdoc />
-    public IBuilder Builder { get; }
 
     /// <inheritdoc />
     public ValueTask DisposeAsync()
