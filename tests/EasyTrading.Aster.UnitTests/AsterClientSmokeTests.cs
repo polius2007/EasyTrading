@@ -41,22 +41,24 @@ public sealed class AsterClientSmokeTests
     }
 
     [Fact]
-    public async Task Pending_write_methods_throw_NotImplementedException()
+    public async Task Signed_endpoints_without_credentials_raise_AuthenticationException()
     {
+        // No Credentials configured → SignAndSendAsync rejects up-front before any HTTP. We probe
+        // via GetStateAsync because it doesn't swallow auth errors the way the cancel/transfer
+        // result-returning methods do.
         var options = new AsterClientOptions { Network = AsterNetwork.Mainnet };
         await using var client = new AsterClient(options);
 
-        await Assert.ThrowsAsync<NotImplementedException>(() =>
-            client.Orders.PlaceLimitAsync("BTCUSDT", OrderSide.Buy, 60_000m, 0.001m));
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Account.GetStateAsync());
     }
 
     [Fact]
-    public async Task Pending_user_streams_throw_NotImplementedException_on_enumeration()
+    public async Task User_streams_without_credentials_raise_AuthenticationException()
     {
         var options = new AsterClientOptions { Network = AsterNetwork.Mainnet };
         await using var client = new AsterClient(options);
 
-        await Assert.ThrowsAsync<NotImplementedException>(async () =>
+        await Assert.ThrowsAsync<AuthenticationException>(async () =>
         {
             await foreach (var _ in client.Streams.MyFillsAsync(default)) { /* never reached */ }
         });

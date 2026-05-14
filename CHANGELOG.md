@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] — Aster Finance client (full surface) + HyperLiquid bumped to 1.1.0
+
+This release ships **EasyTrading.Aster `1.1.0`** with a full Aster Finance V3 surface:
+REST reads + writes + EIP-712 signing + WebSocket streams. `EasyTrading.HyperLiquid` /
+`Abstractions` / `Core` are also bumped to `1.1.0` from `1.0.3` for version alignment; the
+HyperLiquid surface itself is unchanged from `1.0.3`.
+
+### Added — `EasyTrading.Aster` (feature-complete, was scaffold-only in `1.1.0-alpha.1`)
+
+- **`AsterSigner`** — EIP-712 signer matching Aster's published flow: domain
+  `AsterSignTransaction` v1, chainId 1666, verifyingContract `0x0`; signs the URL-encoded
+  form of each request (with `nonce` + `signer` appended) and produces a 65-byte
+  `r ‖ s ‖ v` hex signature ready to drop into the request as `signature`.
+- **`AsterRestClient`** — public + signed transport. `SendSignedAsync` injects nonce/signer,
+  EIP-712-signs, and posts via `application/x-www-form-urlencoded` (POST/PUT) or query string
+  (GET/DELETE). Honours the project-wide retry policy via `AsterHttp`.
+- **`AsterMetaCache`** — caches per-symbol `PRICE_FILTER`, `LOT_SIZE`, `MIN_NOTIONAL` from
+  `/fapi/v3/exchangeInfo`; refreshed on demand.
+- **`AsterOrderValidator`** — client-side rejection on tick / step / min-qty / max-qty /
+  min-notional violations before the network round-trip.
+- **`AsterOrders`** — `Place / PlaceLimit / PlaceMarket / PlaceStop / PlaceBatch /
+  Modify / ModifyBatch / Cancel / CancelByClientId / CancelBatch / CancelAll /
+  ScheduleCancel`. (`PlaceTwap` / `CancelTwap` throw `NotSupportedException` — Aster's V3
+  API doesn't expose a TWAP order type.)
+- **`AsterPositions`** — `GetAll / Get / SetLeverage / SetMarginMode / AddMargin /
+  ReduceMargin / Close`. Margin-type idempotency: `-4046` ("no need to change margin type")
+  is treated as success.
+- **`AsterTrades`** — `GetMyFills(symbol, from, to)`. Aster requires `symbol` on
+  `/fapi/v3/userTrades`, so the cross-DEX `GetMyFillsByOrderAsync(orderId)` throws
+  `NotSupportedException` directing callers to provide a symbol hint.
+- **`AsterAccount`** — `GetState / GetBalance(s) / GetFees / GetPortfolio / GetSubAccounts /
+  GetRateLimit / ApproveAgent`. (`Portfolio`, `SubAccounts`, `RateLimit` return empty
+  snapshots until Aster exposes the corresponding V3 endpoints.)
+- **`AsterTransfers`** — `Withdraw / TransferUsd / SpotToPerp / PerpToSpot / ToSubAccount`.
+- **`AsterWebSocketClient`** — Binance-style multiplex over `wss://fstream.asterdex.com/ws`.
+  Subscribe via `{"method":"SUBSCRIBE","params":[…],"id":N}`; reader dispatches by stream
+  key reconstructed from `e` + `s` (or by `stream` field on combined-stream replies).
+  Exponential reconnect with automatic re-subscribe; `Reconnected` event for downstream
+  gap-recovery hooks.
+- **`AsterStreams`** — all 9 `IStreams` channels wired up:
+  - Market (no auth): `Trades` (aggTrade), `OrderBook` (partial depth 5/10/20),
+    `Candles` (kline), `AllMids` (`!markPrice@arr@1s`), `BestBidOffer` (bookTicker).
+  - User (listenKey-bound, signed): `MyOrders` (ORDER_TRADE_UPDATE),
+    `MyFills` (ORDER_TRADE_UPDATE filtered to `executionType=TRADE`),
+    `MyNotifications` (MARGIN_CALL). `MyFundings` is an empty stream pending Aster funding-
+    event coverage (use `Trades.GetMyFillsAsync` polling for now).
+  - User socket uses a separate connection bound to the `listenKey`; library auto-runs a
+    30-min PUT keepalive while the stream is alive.
+- **DI**: `services.AddEasyTrading().AddAster(o => o.Credentials = new AsterCredentials(...))`.
+
+### Tests
+
+- 89 HL + 23 Aster = **112 unit tests** all green. New suites:
+  - `AsterSignerTests` (5 tests) — determinism, shape (0x + 130 hex + v ∈ {1b,1c}),
+    different message / key produces different signature, edge cases.
+  - `AsterOrderValidatorTests` (10 tests) — every filter rule + reduce-only short-circuit.
+- 8 integration tests against live mainnet (HL 5 + Aster 5: exchangeInfo, depth(BTCUSDT),
+  allMids, WS trades(BTCUSDT), WS bookTicker(BTCUSDT)) — all green.
+
+### Notes
+
+- Without a testnet wallet, the **signed write path is verified at unit-test level
+  (signer + validator + form-encoding) but not end-to-end against the live Aster venue**.
+  When users supply credentials and place their first order, please verify the response
+  matches expectations and report any errors to the issue tracker — happy to iterate.
+- `EasyTrading.HyperLiquid 1.1.0` is a metadata-version-bump release; the HL public surface
+  and behaviour are unchanged from `1.0.3`.
+
 ## [1.0.3] — Canonical EasyTrading mark for infrastructure packages + docs URL fix
 
 ### Changed

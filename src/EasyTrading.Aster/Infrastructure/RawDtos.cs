@@ -106,3 +106,113 @@ internal sealed record OpenInterestRaw(
     [property: JsonPropertyName("symbol")] string Symbol,
     [property: JsonPropertyName("openInterest")] decimal OpenInterest,
     [property: JsonPropertyName("time")] long Time);
+
+// ── /fapi/v3/order — single order response (POST/GET/PUT/DELETE) ─────────────
+
+internal sealed record OrderResponseRaw(
+    [property: JsonPropertyName("orderId")] long OrderId,
+    [property: JsonPropertyName("symbol")] string Symbol,
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("clientOrderId")] string? ClientOrderId,
+    [property: JsonPropertyName("price")] decimal? Price,
+    [property: JsonPropertyName("avgPrice")] decimal? AvgPrice,
+    [property: JsonPropertyName("origQty")] decimal OrigQty,
+    [property: JsonPropertyName("executedQty")] decimal ExecutedQty,
+    [property: JsonPropertyName("cumQuote")] decimal? CumQuote,
+    [property: JsonPropertyName("timeInForce")] string? TimeInForce,
+    [property: JsonPropertyName("type")] string Type,
+    [property: JsonPropertyName("origType")] string? OrigType,
+    [property: JsonPropertyName("reduceOnly")] bool? ReduceOnly,
+    [property: JsonPropertyName("closePosition")] bool? ClosePosition,
+    [property: JsonPropertyName("side")] string Side,
+    [property: JsonPropertyName("positionSide")] string? PositionSide,
+    [property: JsonPropertyName("stopPrice")] decimal? StopPrice,
+    [property: JsonPropertyName("workingType")] string? WorkingType,
+    [property: JsonPropertyName("priceProtect")] bool? PriceProtect,
+    [property: JsonPropertyName("updateTime")] long? UpdateTime,
+    [property: JsonPropertyName("time")] long? Time);
+
+// ── /fapi/v3/userTrades — fills ──────────────────────────────────────────────
+
+internal sealed record UserTradeRaw(
+    [property: JsonPropertyName("id")] long Id,
+    [property: JsonPropertyName("orderId")] long OrderId,
+    [property: JsonPropertyName("symbol")] string Symbol,
+    [property: JsonPropertyName("side")] string Side,
+    [property: JsonPropertyName("price")] decimal Price,
+    [property: JsonPropertyName("qty")] decimal Quantity,
+    [property: JsonPropertyName("quoteQty")] decimal? QuoteQty,
+    [property: JsonPropertyName("realizedPnl")] decimal? RealizedPnl,
+    [property: JsonPropertyName("commission")] decimal? Commission,
+    [property: JsonPropertyName("commissionAsset")] string? CommissionAsset,
+    [property: JsonPropertyName("time")] long Time,
+    [property: JsonPropertyName("buyer")] bool? Buyer,
+    [property: JsonPropertyName("maker")] bool? Maker,
+    [property: JsonPropertyName("positionSide")] string? PositionSide);
+
+// ── /fapi/v3/account — account snapshot ─────────────────────────────────────
+
+internal sealed record AccountInfoRaw(
+    [property: JsonPropertyName("totalWalletBalance")] decimal TotalWalletBalance,
+    [property: JsonPropertyName("totalUnrealizedProfit")] decimal TotalUnrealizedProfit,
+    [property: JsonPropertyName("totalMarginBalance")] decimal TotalMarginBalance,
+    [property: JsonPropertyName("totalInitialMargin")] decimal TotalInitialMargin,
+    [property: JsonPropertyName("totalMaintMargin")] decimal TotalMaintMargin,
+    [property: JsonPropertyName("availableBalance")] decimal AvailableBalance,
+    [property: JsonPropertyName("maxWithdrawAmount")] decimal MaxWithdrawAmount,
+    [property: JsonPropertyName("updateTime")] long? UpdateTime,
+    [property: JsonPropertyName("assets")] IReadOnlyList<AccountAssetRaw>? Assets,
+    [property: JsonPropertyName("positions")] IReadOnlyList<AccountPositionRaw>? Positions);
+
+internal sealed record AccountAssetRaw(
+    [property: JsonPropertyName("asset")] string Asset,
+    [property: JsonPropertyName("walletBalance")] decimal WalletBalance,
+    [property: JsonPropertyName("unrealizedProfit")] decimal? UnrealizedProfit,
+    [property: JsonPropertyName("marginBalance")] decimal? MarginBalance,
+    [property: JsonPropertyName("maintMargin")] decimal? MaintMargin,
+    [property: JsonPropertyName("initialMargin")] decimal? InitialMargin,
+    [property: JsonPropertyName("availableBalance")] decimal? AvailableBalance,
+    [property: JsonPropertyName("maxWithdrawAmount")] decimal? MaxWithdrawAmount);
+
+internal sealed record AccountPositionRaw(
+    [property: JsonPropertyName("symbol")] string Symbol,
+    [property: JsonPropertyName("positionSide")] string? PositionSide,
+    [property: JsonPropertyName("positionAmt")] decimal PositionAmt,
+    [property: JsonPropertyName("entryPrice")] decimal EntryPrice,
+    [property: JsonPropertyName("unrealizedProfit")] decimal? UnrealizedProfit,
+    [property: JsonPropertyName("leverage")] int? Leverage,
+    [property: JsonPropertyName("marginType")] string? MarginType,
+    [property: JsonPropertyName("isolatedMargin")] decimal? IsolatedMargin,
+    [property: JsonPropertyName("liquidationPrice")] decimal? LiquidationPrice,
+    [property: JsonPropertyName("markPrice")] decimal? MarkPrice,
+    [property: JsonPropertyName("notional")] decimal? Notional,
+    [property: JsonPropertyName("isolatedWallet")] decimal? IsolatedWallet,
+    [property: JsonPropertyName("updateTime")] long? UpdateTime);
+
+// ── /fapi/v3/positionRisk — position risk view ──────────────────────────────
+
+internal sealed record PositionRiskRaw(
+    [property: JsonPropertyName("symbol")] string Symbol,
+    [property: JsonPropertyName("positionSide")] string? PositionSide,
+    [property: JsonPropertyName("positionAmt")] decimal PositionAmt,
+    [property: JsonPropertyName("entryPrice")] decimal EntryPrice,
+    [property: JsonPropertyName("markPrice")] decimal MarkPrice,
+    [property: JsonPropertyName("unRealizedProfit")] decimal UnrealizedProfit,
+    [property: JsonPropertyName("liquidationPrice")] decimal LiquidationPrice,
+    [property: JsonPropertyName("leverage")] int Leverage,
+    [property: JsonPropertyName("marginType")] string MarginType,
+    [property: JsonPropertyName("isolatedMargin")] decimal? IsolatedMargin,
+    [property: JsonPropertyName("notional")] decimal? Notional,
+    [property: JsonPropertyName("isolatedWallet")] decimal? IsolatedWallet,
+    [property: JsonPropertyName("updateTime")] long? UpdateTime);
+
+// ── /fapi/v3/listenKey ──────────────────────────────────────────────────────
+
+internal sealed record ListenKeyRaw(
+    [property: JsonPropertyName("listenKey")] string ListenKey);
+
+// ── /fapi/v3/asset/wallet/transfer ──────────────────────────────────────────
+
+internal sealed record TransferResultRaw(
+    [property: JsonPropertyName("tranId")] long TranId,
+    [property: JsonPropertyName("status")] string Status);

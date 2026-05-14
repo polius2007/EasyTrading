@@ -76,4 +76,137 @@ internal static class AsterMapper
 
     /// <summary>Aster timestamps are Unix milliseconds, same as Binance.</summary>
     public static DateTimeOffset ToDt(long unixMs) => DateTimeOffset.FromUnixTimeMilliseconds(unixMs);
+
+    // ─── order / fill / position / account mapping ───────────────────────────
+
+    public static OrderSide ParseSide(string s) => string.Equals(s, "BUY", StringComparison.OrdinalIgnoreCase)
+        ? OrderSide.Buy : OrderSide.Sell;
+
+    public static OrderStatus ParseStatus(string s) => s.ToUpperInvariant() switch
+    {
+        "NEW"               => OrderStatus.Open,
+        "PARTIALLY_FILLED"  => OrderStatus.PartiallyFilled,
+        "FILLED"            => OrderStatus.Filled,
+        "CANCELED" or "CANCELLED" => OrderStatus.Cancelled,
+        "REJECTED"          => OrderStatus.Rejected,
+        "EXPIRED"           => OrderStatus.Cancelled, // closest semantic match
+        _                   => OrderStatus.Open,
+    };
+
+    public static OrderType ParseType(string s) => s.ToUpperInvariant() switch
+    {
+        "LIMIT"                 => OrderType.Limit,
+        "MARKET"                => OrderType.Market,
+        "STOP"                  => OrderType.StopLimit,
+        "STOP_MARKET"           => OrderType.StopMarket,
+        "TAKE_PROFIT"           => OrderType.TakeProfit,
+        "TAKE_PROFIT_MARKET"    => OrderType.TakeProfit,
+        "TRAILING_STOP_MARKET"  => OrderType.StopMarket,
+        _                       => OrderType.Limit,
+    };
+
+    public static TimeInForce ParseTif(string? s) => s?.ToUpperInvariant() switch
+    {
+        "GTC"   => TimeInForce.Gtc,
+        "IOC"   => TimeInForce.Ioc,
+        "FOK"   => TimeInForce.Fok,
+        "GTX"   => TimeInForce.Alo, // Aster's GTX = Good-Till-Crossing (post-only); maps to ALO
+        null    => TimeInForce.Gtc,
+        _       => TimeInForce.Gtc,
+    };
+
+    public static MarginMode ParseMarginMode(string? s) => s?.ToUpperInvariant() switch
+    {
+        "ISOLATED"  => MarginMode.Isolated,
+        "CROSSED" or "CROSS" => MarginMode.Cross,
+        _           => MarginMode.Cross,
+    };
+
+    public static Order MapOrder(OrderResponseRaw raw)
+    {
+        var createdMs = raw.Time ?? raw.UpdateTime ?? 0L;
+        var updatedMs = raw.UpdateTime ?? raw.Time ?? 0L;
+        return new Order(
+            OrderId:        raw.OrderId,
+            ClientOrderId:  raw.ClientOrderId,
+            Symbol:         raw.Symbol,
+            Side:           ParseSide(raw.Side),
+            OrderType:      ParseType(raw.Type),
+            Price:          raw.Price > 0 ? raw.Price : null,
+            TriggerPrice:   raw.StopPrice > 0 ? raw.StopPrice : null,
+            Size:           raw.OrigQty,
+            FilledSize:     raw.ExecutedQty,
+            TimeInForce:    ParseTif(raw.TimeInForce),
+            ReduceOnly:     raw.ReduceOnly ?? false,
+            Status:         ParseStatus(raw.Status),
+            CreatedAt:      ToDt(createdMs),
+            UpdatedAt:      ToDt(updatedMs));
+    }
+
+    public static Fill MapFill(UserTradeRaw raw)
+    {
+        // Aster reports "buyer": true when the user was on the buy side of the trade. The order's
+        // side matches that. "maker": true → passive (limit-resting) execution.
+        var side = ParseSide(raw.Side);
+        return new Fill(
+            TradeId:       raw.Id,
+            OrderId:       raw.OrderId,
+            ClientOrderId: null, // not present in V3 trade payload
+            Symbol:        raw.Symbol,
+            Side:          side,
+            Price:         raw.Price,
+            Size:          raw.Quantity,
+            Fee:           raw.Commission ?? 0m,
+            FeeAsset:      raw.CommissionAsset ?? "USDT",
+            IsMaker:       raw.Maker ?? false,
+            Time:          ToDt(raw.Time));
+    }
+
+    public static Position MapPosition(PositionRiskRaw raw) => new(
+        Symbol:           raw.Symbol,
+        Size:             raw.PositionAmt,
+        EntryPrice:       raw.EntryPrice,
+        MarkPrice:        raw.MarkPrice,
+        UnrealizedPnl:    raw.UnrealizedProfit,
+        RealizedPnl:      0m, // Aster's positionRisk doesn't carry realised PnL — call /income for history
+        Leverage:         raw.Leverage,
+        MarginMode:       ParseMarginMode(raw.MarginType),
+        LiquidationPrice: raw.LiquidationPrice > 0 ? raw.LiquidationPrice : null,
+        Margin:           raw.IsolatedMargin ?? 0m);
+
+    public static Position MapPosition(AccountPositionRaw raw) => new(
+        Symbol:           raw.Symbol,
+        Size:             raw.PositionAmt,
+        EntryPrice:       raw.EntryPrice,
+        MarkPrice:        raw.MarkPrice ?? 0m,
+        UnrealizedPnl:    raw.UnrealizedProfit ?? 0m,
+        RealizedPnl:      0m,
+        Leverage:         raw.Leverage ?? 1,
+        MarginMode:       ParseMarginMode(raw.MarginType),
+        LiquidationPrice: raw.LiquidationPrice > 0 ? raw.LiquidationPrice : null,
+        Margin:           raw.IsolatedMargin ?? 0m);
+
+    public static AccountState MapAccount(AccountInfoRaw raw)
+    {
+        var positions = raw.Positions?
+            .Where(p => p.PositionAmt != 0m)
+            .Select(MapPosition)
+            .ToList()
+            ?? new List<Position>();
+
+        var balances = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        if (raw.Assets is not null)
+        {
+            foreach (var a in raw.Assets)
+                balances[a.Asset] = a.WalletBalance;
+        }
+
+        return new AccountState(
+            AccountValue:      raw.TotalMarginBalance,
+            FreeCollateral:    raw.AvailableBalance,
+            MaintenanceMargin: raw.TotalMaintMargin,
+            Positions:         positions,
+            Balances:          balances,
+            Timestamp:         ToDt(raw.UpdateTime ?? 0L));
+    }
 }

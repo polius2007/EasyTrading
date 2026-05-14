@@ -17,6 +17,9 @@ public sealed class AsterClient : IAsterExchange
     private readonly ILogger<AsterClient> _logger;
     private readonly HttpClient _http;
     private readonly bool _ownsHttp;
+    private readonly AsterMetaCache _metaCache;
+    private readonly AsterWebSocketClient _marketWs;
+    private readonly AsterStreams _streams;
 
     /// <summary>Construct with explicit options. Creates an internal <see cref="HttpClient"/>.</summary>
     public AsterClient(AsterClientOptions options, ILogger<AsterClient>? logger = null)
@@ -46,15 +49,24 @@ public sealed class AsterClient : IAsterExchange
         _options = options;
         _logger = logger ?? NullLogger<AsterClient>.Instance;
 
-        var rest = new AsterRestClient(_http, _options);
+        var nonce = new AsterNonce();
+        var rest = new AsterRestClient(_http, _options, nonce);
+        _metaCache = new AsterMetaCache(rest);
+
+        var wsBase = _options.GetEffectiveWebSocketUrl();
+        _marketWs = new AsterWebSocketClient(
+            urlProvider:      _ => Task.FromResult(wsBase),
+            reconnectDelay:   _options.WebSocketReconnectDelay,
+            logger:           _logger);
 
         Markets   = new AsterMarkets(rest);
-        Orders    = new AsterOrders();
-        Positions = new AsterPositions();
-        Trades    = new AsterTrades();
-        Account   = new AsterAccount();
-        Transfers = new AsterTransfers();
-        Streams   = new AsterStreams();
+        Orders    = new AsterOrders(rest, _metaCache);
+        Positions = new AsterPositions(rest, _metaCache);
+        Trades    = new AsterTrades(rest);
+        Account   = new AsterAccount(rest);
+        Transfers = new AsterTransfers(rest);
+        _streams  = new AsterStreams(_marketWs, rest, _options);
+        Streams   = _streams;
     }
 
     private static HttpClient CreateHttpClient(AsterClientOptions options)
@@ -67,11 +79,6 @@ public sealed class AsterClient : IAsterExchange
     public string ExchangeId => "aster";
 
     /// <inheritdoc />
-    /// <remarks>
-    /// Capabilities reflect what the surface is contracted to do today; until Phase 6.2 lands,
-    /// signed-action capabilities (Spot, BatchOperations, AgentWallets, SubAccounts) will throw
-    /// <see cref="NotImplementedException"/> when called.
-    /// </remarks>
     public ExchangeCapabilities Capabilities =>
         ExchangeCapabilities.Perpetuals
         | ExchangeCapabilities.AgentWallets
@@ -98,9 +105,11 @@ public sealed class AsterClient : IAsterExchange
     public IStreams Streams { get; }
 
     /// <inheritdoc />
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
+        await _streams.DisposeAsync().ConfigureAwait(false);
+        await _marketWs.DisposeAsync().ConfigureAwait(false);
+        _metaCache.Dispose();
         if (_ownsHttp) _http.Dispose();
-        return ValueTask.CompletedTask;
     }
 }
