@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0-alpha.1] — Phase 3.0: HyperLiquid Exchange endpoint, EIP-712 signing, core trading writes
+
+### Added
+- **Signing foundation**:
+  - `HlMsgPack` — HL-canonical msgpack encoder (preserves insertion order, exact byte parity with the Python reference SDK).
+  - `HlSigner` — action hash (msgpack + nonce + vault byte + expires) + L1 phantom-agent EIP-712 + user-signed EIP-712 (Domain `HyperliquidSignTransaction`, chainId `0x66eee`). Both flavours produce wire-format `{r, s, v}`.
+  - `HlNonce` — strictly monotonic millisecond nonce.
+- **HlExchangeClient** — typed `POST /exchange` wrapper. Builds the signed envelope, dispatches L1 vs user-signed, maps HL error strings to typed exceptions (`RateLimitException`, `InsufficientFundsException`, `InvalidOrderException`, `AuthenticationException`).
+- **HlMetaCache** — caches perp + spot universe so order actions can use HL's integer asset id (`BTC` → `0`, spot pairs → `10000 + pairIndex`).
+- **HlOrders write methods (Phase 3.0)**:
+  - `PlaceAsync`, `PlaceLimitAsync`, `PlaceMarketAsync` (IOC + 5% slippage from live mid), `PlaceStopAsync`.
+  - `PlaceBatchAsync`.
+  - `CancelAsync`, `CancelByClientIdAsync`, `CancelBatchAsync`, `CancelAllAsync`.
+  - `ScheduleCancelAsync` (dead-man switch).
+- **HlPositions write methods (Phase 3.0)**: `SetLeverageAsync`, `CloseAsync` (reduce-only IOC market with slippage).
+- **Auto-attach builder fee** — every order action is augmented with the default builder routing from `HlBuilderDefaults` (or with the override set via `HyperLiquidClientOptions.BuilderFee` / `OrderRequest.BuilderFeeOverride`). Zero rate effectively opts out.
+- **Tests**: 39 → 58 unit tests. New suites:
+  - `HlMsgPackTests` — byte-level checks of fixmap / fixstr / fixarray / fixint boundaries / insertion-order preservation.
+  - `HlSignerTests` — action-hash determinism, hash differs by nonce / vault / chain, L1 and user-signed signatures are well-formed and reproducible.
+
+### Pending (Phase 3.1 follow-up)
+- **User-signed actions**: `usdSend`, `withdraw3`, `spotSend`, `usdClassTransfer`, `sendAsset`, `approveAgent`, `approveBuilderFee` — wired up in `HlSigner.SignUserAction` but not exposed via the `ITransfers` / `IAccount` write methods yet.
+- **Remaining L1 actions**: `modify`, `batchModify`, `updateIsolatedMargin` (margin tweaks), `twapOrder`, `twapCancel`, `vaultTransfer`, `cDeposit` / `cWithdraw` / `tokenDelegate`.
+- **Auto-call `approveBuilderFee`** on first order if the receiving builder isn't approved yet for the signer's account.
+- **Integration tests** against testnet against a real wallet (`EASYTRADING_INTEGRATION=1`).
+
+### Notes
+- **Pinned `Nethereum.Signer` to 4.26.0** — 4.27.0 has a regression in `EthECKey.SignAndCalculateV` that throws `Invalid DER signature` on the internal round-trip. Reverting to 4.26.0 restores correct signing.
+- All write methods carry the auto-attached builder fee, but the receiving address must approve the builder once via HyperLiquid's UI for fees to actually flow. Phase 3.1 will automate that approval.
+- All trading methods are *alpha* until validated end-to-end on HyperLiquid testnet (Phase 3.1).
+
 ## [0.2.1-alpha.1] — Builder-fee handling reorganised
 
 ### Changed

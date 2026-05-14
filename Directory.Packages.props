@@ -21,6 +21,12 @@
     <PackageVersion Include="Polly" Version="8.5.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Crypto / signing (HyperLiquid Exchange endpoint)">
+    <!-- Brings keccak256 (Sha3Keccack), secp256k1 ECDSA (EthECKey), and Nethereum.Util. -->
+    <!-- 4.26.0: 4.27.0 had a regression in EthECKey.SignAndCalculateV where DER round-trip throws. -->
+    <PackageVersion Include="Nethereum.Signer" Version="4.26.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Tests">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageVersion Include="xunit" Version="2.9.2" />

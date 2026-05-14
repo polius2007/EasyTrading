@@ -13,10 +13,13 @@ namespace EasyTrading.HyperLiquid;
 /// </summary>
 public sealed class HyperLiquidClient : IHyperLiquidExchange
 {
-    /// <summary>Message used by modules whose write-side operations land in Phase 3 (Exchange endpoint + EIP-712 signing).</summary>
-    internal const string WriteOpPhase3Message =
-        "HyperLiquid write operations (Exchange endpoint, EIP-712 signing) land in Phase 3. "
+    /// <summary>Message used by write-side operations that still land in Phase 3.1 (user-signed actions: transfers, withdrawals, approvals, vault deposits, staking).</summary>
+    internal const string WriteOpPhase31Message =
+        "This HyperLiquid write operation (user-signed action) lands in Phase 3.1. "
         + "See https://github.com/polius2007/EasyTrading/blob/main/CHANGELOG.md";
+
+    /// <summary>Back-compat alias for modules that still reference the Phase-2 constant name. Points at the Phase 3.1 message.</summary>
+    internal const string WriteOpPhase3Message = WriteOpPhase31Message;
 
     /// <summary>Message used by streaming methods, which land in Phase 4 (WebSocket).</summary>
     internal const string StreamPhase4Message =
@@ -27,27 +30,21 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
     private readonly ILogger<HyperLiquidClient> _logger;
     private readonly HttpClient _http;
     private readonly bool _ownsHttp;
+    private readonly HlMetaCache _metaCache;
 
     /// <summary>Construct a HyperLiquid client with explicit options. Creates an internal <see cref="HttpClient"/>.</summary>
-    /// <param name="options">Client options.</param>
-    /// <param name="logger">Optional logger. Defaults to <see cref="NullLogger{T}.Instance"/>.</param>
     public HyperLiquidClient(HyperLiquidClientOptions options, ILogger<HyperLiquidClient>? logger = null)
         : this(CreateHttpClient(options), options, ownsHttp: true, logger)
     {
     }
 
     /// <summary>Construct via <see cref="IOptions{TOptions}"/> (used by DI).</summary>
-    /// <param name="options">Options accessor.</param>
-    /// <param name="logger">Logger.</param>
     public HyperLiquidClient(IOptions<HyperLiquidClientOptions> options, ILogger<HyperLiquidClient>? logger = null)
         : this((options ?? throw new ArgumentNullException(nameof(options))).Value, logger)
     {
     }
 
     /// <summary>Construct with a caller-supplied <see cref="HttpClient"/>. The supplied client is not disposed.</summary>
-    /// <param name="httpClient">HTTP client to use for REST calls.</param>
-    /// <param name="options">Client options.</param>
-    /// <param name="logger">Optional logger.</param>
     public HyperLiquidClient(HttpClient httpClient, HyperLiquidClientOptions options, ILogger<HyperLiquidClient>? logger = null)
         : this(httpClient, options, ownsHttp: false, logger)
     {
@@ -64,10 +61,13 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
         _logger = logger ?? NullLogger<HyperLiquidClient>.Instance;
 
         var info = new HlInfoClient(_http, _options);
+        var nonce = new HlNonce();
+        var exchange = new HlExchangeClient(_http, _options, nonce);
+        _metaCache = new HlMetaCache(info);
 
         Markets   = new HlMarkets(info);
-        Orders    = new HlOrders(info, _options);
-        Positions = new HlPositions(info, _options);
+        Orders    = new HlOrders(info, exchange, _metaCache, _options);
+        Positions = new HlPositions(info, exchange, _metaCache, _options);
         Trades    = new HlTrades(info, _options);
         Account   = new HlAccount(info, _options);
         Transfers = new HlTransfers();
@@ -103,34 +103,27 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
 
     /// <inheritdoc />
     public IMarkets Markets { get; }
-
     /// <inheritdoc />
     public IOrders Orders { get; }
-
     /// <inheritdoc />
     public IPositions Positions { get; }
-
     /// <inheritdoc />
     public ITrades Trades { get; }
-
     /// <inheritdoc />
     public IAccount Account { get; }
-
     /// <inheritdoc />
     public ITransfers Transfers { get; }
-
     /// <inheritdoc />
     public IStreams Streams { get; }
-
     /// <inheritdoc />
     public IVaults Vaults { get; }
-
     /// <inheritdoc />
     public IStaking Staking { get; }
 
     /// <inheritdoc />
     public ValueTask DisposeAsync()
     {
+        _metaCache.Dispose();
         if (_ownsHttp)
             _http.Dispose();
 

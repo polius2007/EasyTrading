@@ -66,13 +66,29 @@ public sealed class HyperLiquidClientSmokeTests
     }
 
     [Fact]
-    public async Task Write_operations_still_throw_NotImplementedException_in_Phase_2()
+    public async Task Phase_3_1_user_signed_writes_still_throw_NotImplementedException()
     {
         var client = new HyperLiquidClient(new HyperLiquidClientOptions());
 
-        await Assert.ThrowsAsync<NotImplementedException>(() => client.Orders.CancelAllAsync());
-        await Assert.ThrowsAsync<NotImplementedException>(() => client.Positions.SetLeverageAsync("BTC", 10, MarginMode.Cross));
+        // User-signed actions (transfers, withdrawals, agent / builder approvals, vault deposits, staking)
+        // require Phase 3.1's user-signed EIP-712 dispatch. They still raise NotImplementedException.
         await Assert.ThrowsAsync<NotImplementedException>(() => client.Transfers.SpotToPerpAsync(100m));
+        await Assert.ThrowsAsync<NotImplementedException>(() => client.Account.ApproveAgentAsync("0xagent"));
+        await Assert.ThrowsAsync<NotImplementedException>(() => client.Vaults.DepositAsync("0xvault", 1m));
+        await Assert.ThrowsAsync<NotImplementedException>(() => client.Staking.DelegateAsync("0xvalidator", 1m));
+
+        // TWAP / Modify also still pending.
+        await Assert.ThrowsAsync<NotImplementedException>(() => client.Orders.PlaceTwapAsync(
+            new EasyTrading.Abstractions.Models.TwapRequest("BTC", OrderSide.Buy, 0.01m, 30)));
+    }
+
+    [Fact]
+    public async Task Phase_3_writes_without_credentials_throw_AuthenticationException()
+    {
+        var client = new HyperLiquidClient(new HyperLiquidClientOptions());
+
+        // CancelAllAsync hits GetOpenAsync first, which requires a user address before any network call.
+        await Assert.ThrowsAsync<AuthenticationException>(() => client.Orders.CancelAllAsync());
     }
 
     [Fact]
