@@ -27,9 +27,14 @@ trader transparently.
 Binance-style multiplex for market data + a separate listenKey-bound socket for user
 data with 30-min keepalive.
 
-**dYdX v4** — scaffold in tree (`src/EasyTrading.Dydx/`), Markets reads + public
-WebSocket streams against the v4 Indexer work end-to-end. Cosmos SDK transaction signing
-for writes is pending (Phase 7.2). Not yet on NuGet.
+**dYdX v4** — full Cosmos SDK signing stack in tree (`src/EasyTrading.Dydx/`). Indexer
+reads + public WebSocket + signed Indexer reads + Cosmos transaction signing (BIP-39 →
+BIP-32 → secp256k1 → bech32 → protobuf-encoded TxRaw → REST broadcast) all wired.
+Address derivation + account-query are end-to-end verified against the live testnet
+validator. Order broadcast (`Orders.PlaceLimitAsync`, `CancelByClientIdAsync`) is
+implemented but waits on a funded-wallet integration run before NuGet publication —
+set `DYDX_TESTNET_MNEMONIC` and run the gated `Testnet_PlaceLimit_and_Cancel`
+integration test to verify.
 
 ## Core conventions (apply always)
 

@@ -29,8 +29,8 @@ The library ships in phases. See [CHANGELOG.md](CHANGELOG.md) for the live state
 | 5 | Hardening (validation + retry + gap recovery)    | ✅     |
 | 6 | Aster client — full surface (REST + WS + EIP-712) | ✅     |
 | 7.0 | dYdX v4 scaffold + Indexer reads + public WS   | ✅     |
-| 7.1 | dYdX signed Indexer reads (Account/Positions)  | ⏳     |
-| 7.2 | dYdX writes via Cosmos SDK + secp256k1 signing | ⏳     |
+| 7.1 | dYdX signed Indexer reads (Account/Positions)  | ✅     |
+| 7.2 | dYdX writes via Cosmos SDK + secp256k1 signing | ✅ (awaits testnet verify) |
 
 ## Coding conventions
 
@@ -71,8 +71,9 @@ The `release.yml` workflow builds, packs, and pushes every `EasyTrading.*` NuGet
 
 When making changes, the bar is:
 - `dotnet build EasyTrading.slnx` — clean (0 warnings, 0 errors, net8.0 + net9.0)
-- `dotnet test EasyTrading.slnx` — all unit tests green (currently 125: 89 HL + 25 Aster + 11 dYdX)
-- With `EASYTRADING_INTEGRATION=1`, integration tests also green (currently 14: 5 HL + 5 Aster + 4 dYdX, all live mainnet)
+- `dotnet test EasyTrading.slnx` — all unit tests green (currently 145: 89 HL + 25 Aster + 31 dYdX)
+- With `EASYTRADING_INTEGRATION=1`, integration tests also green (currently 16: 5 HL + 5 Aster + 6 dYdX, all live mainnet/testnet reads)
+- `DYDX_TESTNET_MNEMONIC` env var unlocks the testnet PlaceLimit + Cancel verification path
 
 If a build error is an analyzer warning (CA*/IDE*), the fix is usually to either suppress it in `Directory.Build.props` `<NoWarn>` with a one-line justification, or to refactor minimally. Don't suppress to hide real bugs.
 

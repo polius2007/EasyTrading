@@ -16,10 +16,15 @@ public sealed class DydxClientOptions
     public Uri? IndexerWebSocketUrl { get; set; }
 
     /// <summary>
-    /// Override the validator gRPC endpoint used for broadcasting signed transactions
-    /// (Phase 7.2). Currently unused.
+    /// Override the validator REST gateway URL used for broadcasting signed Cosmos
+    /// transactions (<c>/cosmos/tx/v1beta1/txs</c>) and querying the account/sequence pair
+    /// (<c>/cosmos/auth/v1beta1/accounts/{address}</c>). If <c>null</c>, a public validator
+    /// REST endpoint is picked from <see cref="Network"/>.
     /// </summary>
-    public Uri? ValidatorGrpcUrl { get; set; }
+    public Uri? ValidatorRestUrl { get; set; }
+
+    /// <summary>Chain ID for the target network. Defaults derived from <see cref="Network"/>.</summary>
+    public string? ChainId { get; set; }
 
     /// <summary>Per-request timeout. Defaults to 30 seconds.</summary>
     public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(30);
@@ -48,6 +53,27 @@ public sealed class DydxClientOptions
     {
         DydxNetwork.Mainnet => new Uri("wss://indexer.dydx.trade/v4/ws"),
         DydxNetwork.Testnet => new Uri("wss://indexer.v4testnet.dydx.exchange/v4/ws"),
+        _ => throw new ArgumentOutOfRangeException(nameof(Network), Network, "Unknown dYdX network."),
+    };
+
+    /// <summary>Resolves the effective validator REST URL for signed-action broadcast.</summary>
+    /// <returns>The validator REST base URL.</returns>
+    public Uri GetEffectiveValidatorRestUrl() => ValidatorRestUrl ?? Network switch
+    {
+        // Public community endpoints that expose the validator REST gateway. Verified
+        // accessible at the time of writing — callers in production should pin their own
+        // validator and pass <see cref="ValidatorRestUrl"/> explicitly.
+        DydxNetwork.Mainnet => new Uri("https://dydx-dao-api.polkachu.com"),
+        DydxNetwork.Testnet => new Uri("https://dydx-testnet-api.polkachu.com"),
+        _ => throw new ArgumentOutOfRangeException(nameof(Network), Network, "Unknown dYdX network."),
+    };
+
+    /// <summary>Resolves the effective Cosmos chain ID for transaction signing.</summary>
+    /// <returns>The chain ID string.</returns>
+    public string GetEffectiveChainId() => ChainId ?? Network switch
+    {
+        DydxNetwork.Mainnet => "dydx-mainnet-1",
+        DydxNetwork.Testnet => "dydx-testnet-4",
         _ => throw new ArgumentOutOfRangeException(nameof(Network), Network, "Unknown dYdX network."),
     };
 }

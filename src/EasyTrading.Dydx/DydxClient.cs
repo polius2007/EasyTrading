@@ -18,6 +18,7 @@ public sealed class DydxClient : IDydxExchange
     private readonly HttpClient _http;
     private readonly bool _ownsHttp;
     private readonly WebSocketClient _ws;
+    private readonly MarketsCache _marketsCache;
 
     /// <summary>Construct with explicit options. Creates an internal <see cref="HttpClient"/>.</summary>
     public DydxClient(DydxClientOptions options, ILogger<DydxClient>? logger = null)
@@ -49,9 +50,30 @@ public sealed class DydxClient : IDydxExchange
 
         var rest = new RestClient(_http, _options);
         _ws = new WebSocketClient(_options.GetEffectiveWebSocketUrl(), _options.WebSocketReconnectDelay, _logger);
+        _marketsCache = new MarketsCache(rest);
+
+        // Build the signed-transaction pipeline if credentials with a mnemonic were supplied.
+        // Read-only Indexer flows work fine without it; writes will throw AuthenticationException
+        // if Orders.PlaceAsync is called with no mnemonic.
+        TransactionBuilder? txBuilder = null;
+        CosmosClient? cosmos = null;
+        if (_options.Credentials is { Mnemonic: { Length: > 0 } } creds)
+        {
+            var signer = new Signer(creds.Mnemonic);
+            // Sanity-check: the address derived from the mnemonic must match Credentials.Address.
+            // Mismatch usually means the user pasted the wrong public address for the mnemonic.
+            if (!string.IsNullOrEmpty(creds.Address) && !string.Equals(signer.Address, creds.Address, StringComparison.Ordinal))
+            {
+                throw new AuthenticationException(
+                    $"DydxCredentials.Address ('{creds.Address}') doesn't match the address derived from the mnemonic ('{signer.Address}'). "
+                    + "Verify you copied the address belonging to this wallet.");
+            }
+            txBuilder = new TransactionBuilder(signer, _options.GetEffectiveChainId());
+            cosmos = new CosmosClient(_http, _options.GetEffectiveValidatorRestUrl(), _options.RetryPolicy);
+        }
 
         Markets   = new Markets(rest);
-        Orders    = new Orders(rest, _options);
+        Orders    = new Orders(rest, _options, _marketsCache, txBuilder, cosmos);
         Positions = new Positions(rest, _options);
         Trades    = new Trades(rest, _options);
         Account   = new Account(rest, _options);
@@ -96,6 +118,7 @@ public sealed class DydxClient : IDydxExchange
     public async ValueTask DisposeAsync()
     {
         await _ws.DisposeAsync().ConfigureAwait(false);
+        _marketsCache.Dispose();
         if (_ownsHttp) _http.Dispose();
     }
 }

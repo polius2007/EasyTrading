@@ -13,11 +13,16 @@ A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClie
 
 ## Status
 
-| Exchange    | Package                              | REST       | WebSocket | Signing | Latest                 |
-|-------------|--------------------------------------|:----------:|:---------:|:-------:|:----------------------:|
-| HyperLiquid | `EasyTrading.HyperLiquid`            |     ✅     |    ✅     |   ✅    | `1.1.1`                |
-| Aster       | `EasyTrading.Aster`                  |     ✅     |    ✅     |   ✅    | `1.1.1`                |
-| dYdX v4     | `EasyTrading.Dydx`                   | reads only |   public  |   wip   | scaffold *(in tree)*   |
+| Exchange    | Package                              | REST | WebSocket | Signing | Latest                              |
+|-------------|--------------------------------------|:----:|:---------:|:-------:|:-----------------------------------:|
+| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅  |    ✅     |   ✅    | `1.1.1`                             |
+| Aster       | `EasyTrading.Aster`                  |  ✅  |    ✅     |   ✅    | `1.1.1`                             |
+| dYdX v4     | `EasyTrading.Dydx`                   |  ✅  |    ✅     |   ✅\*   | in tree *(awaiting testnet verify)* |
+
+*\* dYdX v4 writes use full Cosmos SDK transaction signing (secp256k1 + protobuf + REST broadcast).
+The address-derivation and account-query halves of the pipeline are end-to-end verified against
+the live testnet validator; the broadcast half is wired but awaits a funded testnet wallet's
+green light before NuGet publication. See [CHANGELOG](CHANGELOG.md#unreleased) for details.*
 
 Coverage summary:
 
@@ -130,7 +135,7 @@ Methods are grouped by entity. Everything about orders is on `Orders`; everythin
 
 - [x] HyperLiquid — REST + WebSocket + EIP-712 signing + hardening → `1.1.1`
 - [x] Aster — REST + WebSocket + EIP-712 signing → `1.1.1`
-- [ ] dYdX v4 — `EasyTrading.Dydx` *(in progress: Indexer reads + public WebSocket landed; Cosmos SDK transaction signing for writes pending Phase 7.2)*
+- [x] dYdX v4 — Indexer REST + WebSocket + Cosmos SDK signing (BIP-39 → BIP-32 → secp256k1 → bech32, full proto stack, REST broadcast). `EasyTrading.Dydx` publishes to NuGet once `DYDX_TESTNET_MNEMONIC` end-to-end test goes green from a funded wallet.
 
 ## Documentation
 

@@ -48,12 +48,14 @@ public sealed class DydxClientSmokeTests
     }
 
     [Fact]
-    public async Task Pending_write_methods_throw_NotImplementedException()
+    public async Task Write_methods_without_credentials_raise_AuthenticationException()
     {
+        // Phase 7.2 wired PlaceLimitAsync to a real Cosmos signing path; without credentials it
+        // now raises AuthenticationException (used to be NotImplementedException pre-7.2).
         var options = new DydxClientOptions { Network = DydxNetwork.Mainnet };
         await using var client = new DydxClient(options);
 
-        await Assert.ThrowsAsync<NotImplementedException>(() =>
+        await Assert.ThrowsAsync<AuthenticationException>(() =>
             client.Orders.PlaceLimitAsync("BTC-USD", OrderSide.Buy, 60_000m, 0.001m));
     }
 

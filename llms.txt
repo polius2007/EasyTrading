@@ -17,7 +17,7 @@
 - [EasyTrading.Aster](https://www.nuget.org/packages/EasyTrading.Aster): Aster Finance perp DEX client (REST + WebSocket + EIP-712 signing), stable at 1.1.1
 - [EasyTrading.Abstractions](https://www.nuget.org/packages/EasyTrading.Abstractions): Cross-DEX interfaces and models (IExchangeClient, IEasyTradingBuilder, all DTOs)
 - [EasyTrading.Core](https://www.nuget.org/packages/EasyTrading.Core): Shared infrastructure (HTTP, WS, retries, signing helpers)
-- EasyTrading.Dydx: dYdX v4 client — scaffold in tree, not yet on NuGet (writes via Cosmos SDK signing pending Phase 7.2)
+- EasyTrading.Dydx: dYdX v4 client — full Cosmos SDK signing stack in tree (BIP-39 → secp256k1 → bech32 → protobuf TxRaw → REST broadcast). Address derivation + account query verified end-to-end on testnet. Publishes to NuGet once order-broadcast test goes green from a funded testnet wallet.
 
 ## Source
 

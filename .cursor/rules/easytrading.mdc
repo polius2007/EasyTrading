@@ -14,8 +14,11 @@ Multi-DEX trading client for .NET (HyperLiquid live; Aster + dYdX v4 planned). S
   streams, automatic builder-fee routing.
 - **Aster `1.1.1`** — stable. Same surface, EIP-712 `AsterSignTransaction` signing. WebSocket:
   Binance-style multiplex with listenKey-bound user streams + 30-min keepalive.
-- **dYdX v4** — scaffold in tree (`src/EasyTrading.Dydx/`): Indexer REST reads + public WS work;
-  Cosmos SDK transaction signing for writes pending Phase 7.2. Not yet on NuGet.
+- **dYdX v4** — full Cosmos SDK signing stack in tree (`src/EasyTrading.Dydx/`). Indexer
+  reads + public WS + signed reads + Cosmos transaction signing (BIP-39 → BIP-32 →
+  secp256k1 → bech32 → protobuf TxRaw → REST broadcast) all wired. Address derivation +
+  account query verified end-to-end on testnet; order broadcast awaits funded-wallet test.
+  Publishes to NuGet once `DYDX_TESTNET_MNEMONIC` test goes green.
 
 ## Core rules
 

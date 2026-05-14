@@ -7,6 +7,104 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Phase 7.2 — dYdX Cosmos signing: full write pipeline (in tree, not published)
+
+Lands the complete Cosmos SDK transaction-signing path for dYdX v4. Markets reads
+(Phase 7.0) and Indexer signed reads (Phase 7.1) were already wired; Phase 7.2 closes
+the loop with end-to-end signed writes through the validator's REST broadcast
+endpoint. The package stays `<IsPackable>false</IsPackable>` until the live testnet
+order-placement test (gated by `DYDX_TESTNET_MNEMONIC`) goes green from a funded
+wallet — at which point a `1.2.0` release tags `EasyTrading.Dydx` for NuGet.
+
+Added — Cosmos signing foundation:
+
+- **`Signer`** — BIP-39 mnemonic → BIP-32 derivation at the Cosmos default path
+  (`m/44'/118'/0'/0/0`) → secp256k1 keypair → bech32 `dydx1…` address. ECDSA
+  signing uses BouncyCastle's RFC-6979 deterministic-k path with low-S
+  canonicalisation. Returns the 64-byte raw `r ‖ s` Cosmos signature format.
+- **Vendored .proto + Grpc.Tools codegen** — vendored 27 .proto files from
+  cosmos-sdk and dydxprotocol/v4-chain (plus gogoproto / cosmos_proto / amino
+  extensions). Compiled at build time via `<Protobuf>` items in the csproj
+  (`GrpcServices="None"` since we broadcast via REST, not gRPC).
+- **`TransactionBuilder`** — assembles `TxBody` + `AuthInfo` + `SignDoc`,
+  signs SHA-256(SignDoc), and packs `TxRaw`. Cosmos-correct `Any.TypeUrl` prefix
+  ("/" rather than "type.googleapis.com/").
+- **`CosmosClient`** — `GetAccountAsync(address)` fetches account_number + sequence
+  from `/cosmos/auth/v1beta1/accounts/{address}`; `BroadcastAsync(txBytes, mode)`
+  POSTs base64-encoded `TxRaw` to `/cosmos/tx/v1beta1/txs`. Maps responses to a
+  typed `BroadcastResult(Success, TxHash, ErrorMessage)`.
+- **`MarketsCache`** — caches per-market `atomicResolution` +
+  `quantumConversionExponent` from `/perpetualMarkets` and exposes
+  `ToQuantums(decimal)` / `ToSubticks(decimal)` so callers can hand the module
+  ordinary `decimal` price + size and the conversion to dYdX's on-chain integer
+  representation happens transparently.
+
+Wired writes:
+
+- **`Orders.PlaceLimitAsync`** — builds a LONG_TERM `MsgPlaceOrder` (good_til_block_time
+  = now + 2 min), packs into a Cosmos tx, signs, and broadcasts via REST.
+  `TimeInForce.Gtc/Ioc/Fok/Alo` map onto dYdX's analogues (Fok → Ioc since dYdX
+  deprecated their FILL_OR_KILL enum value). `clientOrderId` accepts a uint32
+  string; if omitted, the module generates a random one.
+- **`Orders.CancelByClientIdAsync`** — wraps `MsgCancelOrder` with the same
+  subaccount + clob-pair + client_id triplet. Cosmos cancels are stateless and
+  reference the placement triple, not a single integer id; `CancelAsync(long)`
+  therefore now throws `NotSupportedException` directing callers to use the
+  client-id flavour.
+- Methods that don't translate cleanly onto dYdX v4 throw `NotSupportedException`
+  with explanatory text: `PlaceBatchAsync`, `ModifyAsync` (no native modify on
+  dYdX — cancel + re-place), `CancelBatchAsync`, `ScheduleCancelAsync`,
+  `PlaceTwapAsync` (no TWAP), and transfers' spot↔perp methods (no separate
+  spot account on v4).
+
+Configuration:
+
+- `DydxClientOptions.ValidatorRestUrl` + `ChainId` (replacing the unused
+  `ValidatorGrpcUrl` slot from 7.0).
+- `GetEffectiveValidatorRestUrl()` defaults to public community endpoints
+  (`https://dydx-dao-api.polkachu.com` for mainnet,
+  `https://dydx-testnet-api.polkachu.com` for testnet) — both verified
+  reachable when this was wired.
+- `GetEffectiveChainId()` defaults to `dydx-mainnet-1` / `dydx-testnet-4`.
+
+Dependencies (central package management):
+
+- `NBitcoin 8.0.5` — BIP-39 + BIP-32 + bech32.
+- `BouncyCastle.Cryptography 2.5.1` — secp256k1 ECDSA with RFC-6979.
+- `Google.Protobuf 3.28.3` — runtime for the codegen'd messages.
+- `Grpc.Tools 2.66.0` (PrivateAssets="All") — protoc + the MSBuild target.
+
+Tests — 145 unit + 6 integration green:
+
+- `SignerTests` (7) — deterministic, low-S form, address derivation matches what
+  Keplr / Leap produce for the BIP-39 test mnemonic.
+- `TransactionBuilderTests` (5) — deterministic bytes for same inputs, parseable
+  `TxRaw`, signature differs by sequence / chain_id, Cosmos-correct typeUrl prefix.
+- `MarketsCacheTests` (5) — quantum / subtick conversion matches cosmpy reference
+  for BTC-USD (`humanSize × 10^10`, `humanPrice × 10^13`) and rejects negative inputs.
+- `DydxClientSmokeTests` (12) — construction, URL resolution, capability flags,
+  AuthenticationException on signed paths without credentials.
+- `DydxIntegrationTests` (6) — live mainnet reads (perpetualMarkets, depth,
+  allMids), WS trades for BTC-USD, **plus the new end-to-end validator check:
+  the test mnemonic's address (`dydx19rl4cm2hmr8afy4kldpxz3fka4jguq0a4erelz`)
+  exists on testnet with `account_number 97601`, `sequence 45` — proving address
+  derivation matches what the chain has on-record and CosmosClient correctly
+  parses the BaseAccount payload.**
+- `DydxIntegrationTests.Testnet_PlaceLimit_and_Cancel_with_mnemonic_from_env` —
+  reads `DYDX_TESTNET_MNEMONIC` from env, derives the address, places a far-from-
+  market post-only buy + cancels by client id. Skips silently if the env var
+  isn't set (so library users without a testnet wallet still get green tests).
+
+Honest status:
+
+- Address derivation, transaction assembly, and the account-query side of the
+  pipeline are **verified end-to-end against the live testnet validator**.
+- Order broadcast (the actual MsgPlaceOrder → TxRaw → POST → on-chain order)
+  is implemented but **not yet verified end-to-end** — that requires a funded
+  testnet wallet. Run the gated integration test from a wallet with a few
+  testnet USDC (faucet: https://faucet.v4testnet.dydx.exchange) and we know
+  for certain. Once verified, IsPackable=true and EasyTrading.Dydx 1.2.0 ships.
+
 ### Phase 7.0 — `EasyTrading.Dydx` scaffold (in tree, not published)
 
 First dYdX v4 work. The scaffold landed under `src/EasyTrading.Dydx/` with
