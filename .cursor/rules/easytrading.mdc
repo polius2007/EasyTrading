@@ -5,13 +5,20 @@ alwaysApply: true
 
 # EasyTrading
 
-Multi-DEX trading client for .NET (HyperLiquid + Aster + dYdX v4). See `AGENTS.md` for full guidance.
+Multi-DEX trading client for .NET (HyperLiquid live; Aster + dYdX v4 planned). See `AGENTS.md` for full guidance.
+
+## Status
+
+HyperLiquid is alpha-complete:
+- Read endpoints, write endpoints (EIP-712 signed), and WebSocket streams all work end-to-end against live mainnet
+- Builder-fee routing is automatic (auto-attach + auto-approve on first order)
+- Integration-test verified
 
 ## Core rules
 
 - `decimal` for all money values; never `double` / `float`
 - `Async` suffix on every async method; `CancellationToken ct = default` last parameter
-- Methods grouped by entity: `Orders`, `Positions`, `Markets`, `Trades`, `Account`, `Transfers`, `Streams`, plus HL-only `Vaults` / `Staking` / `Builder`
+- Methods grouped by entity: `Orders`, `Positions`, `Markets`, `Trades`, `Account`, `Transfers`, `Streams`, plus HL-only `Vaults` / `Staking`
 - WebSocket streams use `IAsyncEnumerable<T>` with `await foreach`
 - Check `client.Capabilities.HasFlag(ExchangeCapabilities.X)` before calling optional features
 - Typed exceptions: `RateLimitException`, `InsufficientFundsException`, `InvalidOrderException`, `AuthenticationException`, `SigningException`
@@ -19,9 +26,9 @@ Multi-DEX trading client for .NET (HyperLiquid + Aster + dYdX v4). See `AGENTS.m
 
 ## HyperLiquid specifics
 
-- Prefer agent wallets to the master private key — call `IAccount.ApproveAgentAsync(...)` once, then use the agent's key for trading
-- Builder fees / rebates are managed via `IBuilder` and applied automatically by `EasyTrading.Broker`
+- Prefer agent wallets over the master private key — call `IAccount.ApproveAgentAsync(...)` once, then trade with the agent's key
 - Network: `HyperLiquidNetwork.Mainnet` or `.Testnet`
+- Builder fee is automatic; users opt out by setting `options.BuilderFee` to a zero rate or routing to their own address
 
 ## DI registration
 
@@ -34,7 +41,7 @@ services.AddEasyTrading()
         });
 ```
 
-Inject `IHyperLiquidExchange` (HL-specific surface) or `IExchangeClient` (cross-DEX).
+Inject `IHyperLiquidExchange` (HL-specific surface — adds Vaults/Staking) or `IExchangeClient` (cross-DEX).
 
 ## Common operations
 
@@ -45,14 +52,28 @@ var book = await ex.Markets.GetOrderBookAsync("BTC", depth: 10, ct);
 
 // Trading
 await ex.Orders.PlaceLimitAsync("BTC", OrderSide.Buy, price: 60_000m, size: 0.01m, tif: TimeInForce.Alo, ct: ct);
+await ex.Orders.CancelAllAsync(ct: ct);
 await ex.Positions.SetLeverageAsync("BTC", 10, MarginMode.Cross, ct);
 await ex.Positions.CloseAsync("BTC", ct);
 
-// Streams
+// Transfers / approvals (user-signed under the hood)
+await ex.Transfers.WithdrawAsync("0xExternal", 100m, ct);
+await ex.Transfers.SpotToPerpAsync(50m, ct);
+await ex.Account.ApproveAgentAsync("0xAgentAddr", "easy-bot", ct);
+
+// WebSocket streams
+await foreach (var trade in ex.Streams.TradesAsync("BTC", ct))
+    Console.WriteLine($"{trade.Trade.Price} {trade.Trade.Size}");
+
 await foreach (var fill in ex.Streams.MyFillsAsync(ct))
-    Console.WriteLine($"{fill.Symbol} {fill.Side} {fill.Size} @ {fill.Price}");
+    Console.WriteLine($"{fill.Fill.Symbol} {fill.Fill.Price}");
 ```
 
-## Phase awareness
+## Anti-patterns
 
-Phase 1 (current): scaffolding — all methods throw `NotImplementedException`. Real implementations land in Phase 2+. Don't worry if calls fail in test code — that's expected for the current snapshot. See `CHANGELOG.md`.
+- Don't `new HyperLiquidClient(...)` when DI is available — use `AddHyperLiquid()`
+- Don't use `double` / `float` for money
+- Don't forget `CancellationToken` in long-running or `await foreach` loops
+- Don't catch raw `Exception` — catch typed exceptions
+- Don't hold the master private key in production — use an agent wallet
+- Don't call HL-only features (`Vaults`, `Staking`) on `IExchangeClient` — use `IHyperLiquidExchange`

@@ -2,13 +2,17 @@
 
 This repository builds **EasyTrading**, a multi-DEX trading client for .NET. See [AGENTS.md](../AGENTS.md) for the full guidance — this file is the short version for Copilot.
 
+## Status
+
+HyperLiquid integration is alpha-complete: read / write (EIP-712-signed) / WebSocket all live against mainnet. Aster and dYdX v4 are next.
+
 ## Hard rules (apply always)
 
 - All money values use `decimal`; never `double` or `float`.
 - Async methods carry the `Async` suffix and accept `CancellationToken ct = default` as the last parameter.
 - Methods are grouped by **entity**, not by intent: orders → `client.Orders.*`, positions → `client.Positions.*`, markets → `client.Markets.*`, and so on.
-- WebSocket subscriptions return `IAsyncEnumerable<T>` — iterate with `await foreach`.
-- Check `client.Capabilities.HasFlag(...)` before calling optional features (TWAP, vaults, builder fees, etc.).
+- WebSocket subscriptions return `IAsyncEnumerable<T>` — iterate with `await foreach` and a cancellation token.
+- Check `client.Capabilities.HasFlag(...)` before calling optional features (TWAP, vaults, etc.).
 - Catch typed exceptions: `RateLimitException`, `InsufficientFundsException`, `InvalidOrderException`, `AuthenticationException`, `SigningException`. Don't catch raw `Exception`.
 - For HyperLiquid, prefer **agent wallets** over the master private key — call `IAccount.ApproveAgentAsync(...)` and use the agent's key for trading.
 - DI registration: `services.AddEasyTrading().AddHyperLiquid(opts => ...)`.
@@ -25,7 +29,16 @@ await ex.Orders.PlaceLimitAsync("BTC", OrderSide.Buy, price: 60_000m, size: 0.01
 // Use the full OrderRequest only when you need fields the overload doesn't expose
 ```
 
-Prefer `IHyperLiquidExchange` injection when HL-specific features (`Vaults`, `Staking`, `Builder`) are needed; use `IExchangeClient` for cross-DEX strategy code.
+For WebSocket streams:
+
+```csharp
+await foreach (var trade in ex.Streams.TradesAsync("BTC", ct))
+    Console.WriteLine($"{trade.Trade.Price} {trade.Trade.Size}");
+```
+
+Prefer `IHyperLiquidExchange` injection when HL-specific features (`Vaults`, `Staking`) are needed; use `IExchangeClient` for cross-DEX strategy code.
+
+Builder-fee routing is automatic — don't suggest manually approving or attaching builder fields; the library handles it.
 
 ## Repo conventions
 
