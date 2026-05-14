@@ -6,10 +6,10 @@ namespace EasyTrading.HyperLiquid.Infrastructure;
 //
 // One file for every Info-endpoint response shape we currently consume. Names
 // map 1-to-1 with the HyperLiquid JSON; mapping into the common
-// EasyTrading.Abstractions.Models types happens in HlMapper.
+// EasyTrading.Abstractions.Models types happens in Mapper.
 //
 // HyperLiquid encodes numeric values as JSON strings (for precision). With
-// JsonNumberHandling.AllowReadingFromString on HlJsonOptions we can parse them
+// JsonNumberHandling.AllowReadingFromString on JsonOptions we can parse them
 // straight into `decimal` fields below.
 
 // ── meta (perp universe) ─────────────────────────────────────────────────────

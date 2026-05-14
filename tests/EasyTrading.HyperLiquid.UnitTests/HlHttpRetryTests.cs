@@ -28,7 +28,7 @@ public sealed class HlHttpRetryTests
             HandlerStep.Ok("hello"));
         using var client = new HttpClient(handler);
 
-        var result = await HlHttp.PostJsonAsync(client, TestUri, "{}", FastRetry(), CancellationToken.None);
+        var result = await Http.PostJsonAsync(client, TestUri, "{}", FastRetry(), CancellationToken.None);
 
         Assert.Equal(HttpStatusCode.OK, result.StatusCode);
         Assert.Equal("hello", result.Body);
@@ -44,7 +44,7 @@ public sealed class HlHttpRetryTests
             HandlerStep.Ok("recovered"));
         using var client = new HttpClient(handler);
 
-        var result = await HlHttp.PostJsonAsync(client, TestUri, "{}", FastRetry(attempts: 3), CancellationToken.None);
+        var result = await Http.PostJsonAsync(client, TestUri, "{}", FastRetry(attempts: 3), CancellationToken.None);
 
         Assert.Equal("recovered", result.Body);
         Assert.Equal(3, handler.CallCount);
@@ -59,7 +59,7 @@ public sealed class HlHttpRetryTests
         using var client = new HttpClient(handler);
 
         await Assert.ThrowsAsync<HttpRequestException>(() =>
-            HlHttp.PostJsonAsync(client, TestUri, "{}", FastRetry(attempts: 2), CancellationToken.None));
+            Http.PostJsonAsync(client, TestUri, "{}", FastRetry(attempts: 2), CancellationToken.None));
 
         Assert.Equal(2, handler.CallCount);
     }
@@ -72,7 +72,7 @@ public sealed class HlHttpRetryTests
             HandlerStep.Ok("recovered"));
         using var client = new HttpClient(handler);
 
-        var result = await HlHttp.PostJsonAsync(client, TestUri, "{}", FastRetry(), CancellationToken.None);
+        var result = await Http.PostJsonAsync(client, TestUri, "{}", FastRetry(), CancellationToken.None);
 
         Assert.Equal(HttpStatusCode.OK, result.StatusCode);
         Assert.Equal("recovered", result.Body);
@@ -89,7 +89,7 @@ public sealed class HlHttpRetryTests
         var retry = FastRetry(attempts: 3);
         retry.RetryOnServerError = false;
 
-        var result = await HlHttp.PostJsonAsync(client, TestUri, "{}", retry, CancellationToken.None);
+        var result = await Http.PostJsonAsync(client, TestUri, "{}", retry, CancellationToken.None);
 
         Assert.Equal(HttpStatusCode.BadGateway, result.StatusCode);
         Assert.Equal(1, handler.CallCount);
@@ -102,7 +102,7 @@ public sealed class HlHttpRetryTests
             HandlerStep.WithStatus(HttpStatusCode.BadRequest, "bad"));
         using var client = new HttpClient(handler);
 
-        var result = await HlHttp.PostJsonAsync(client, TestUri, "{}", FastRetry(), CancellationToken.None);
+        var result = await Http.PostJsonAsync(client, TestUri, "{}", FastRetry(), CancellationToken.None);
 
         Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
         Assert.Equal(1, handler.CallCount);
@@ -119,7 +119,7 @@ public sealed class HlHttpRetryTests
             HandlerStep.Ok("recovered"));
         using var client = new HttpClient(handler);
 
-        var result = await HlHttp.PostJsonAsync(client, TestUri, "{}", FastRetry(), CancellationToken.None);
+        var result = await Http.PostJsonAsync(client, TestUri, "{}", FastRetry(), CancellationToken.None);
 
         Assert.Equal(HttpStatusCode.OK, result.StatusCode);
         Assert.Equal(2, handler.CallCount);
@@ -135,7 +135,7 @@ public sealed class HlHttpRetryTests
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            HlHttp.PostJsonAsync(client, TestUri, "{}", FastRetry(), cts.Token));
+            Http.PostJsonAsync(client, TestUri, "{}", FastRetry(), cts.Token));
     }
 
     // ─── fake handler ────────────────────────────────────────────────────────

@@ -21,15 +21,15 @@ public sealed class AsterSignerTests
     [Fact]
     public void Signature_is_deterministic_for_the_same_inputs()
     {
-        var sig1 = AsterSigner.Sign(SampleMsg, DemoPrivateKey);
-        var sig2 = AsterSigner.Sign(SampleMsg, DemoPrivateKey);
+        var sig1 = Signer.Sign(SampleMsg, DemoPrivateKey);
+        var sig2 = Signer.Sign(SampleMsg, DemoPrivateKey);
         Assert.Equal(sig1, sig2);
     }
 
     [Fact]
     public void Signature_has_expected_shape()
     {
-        var sig = AsterSigner.Sign(SampleMsg, DemoPrivateKey);
+        var sig = Signer.Sign(SampleMsg, DemoPrivateKey);
 
         Assert.StartsWith("0x", sig, StringComparison.Ordinal);
         Assert.Equal(2 + 130, sig.Length); // 0x + 65 bytes * 2 hex chars
@@ -42,18 +42,18 @@ public sealed class AsterSignerTests
     [Fact]
     public void Different_message_produces_different_signature()
     {
-        var sig1 = AsterSigner.Sign(SampleMsg, DemoPrivateKey);
-        var sig2 = AsterSigner.Sign(SampleMsg.Replace("BUY", "SELL", StringComparison.Ordinal), DemoPrivateKey);
+        var sig1 = Signer.Sign(SampleMsg, DemoPrivateKey);
+        var sig2 = Signer.Sign(SampleMsg.Replace("BUY", "SELL", StringComparison.Ordinal), DemoPrivateKey);
         Assert.NotEqual(sig1, sig2);
     }
 
     [Fact]
     public void Different_key_produces_different_signature()
     {
-        var sig1 = AsterSigner.Sign(SampleMsg, DemoPrivateKey);
+        var sig1 = Signer.Sign(SampleMsg, DemoPrivateKey);
         // A different (but valid) private key — flip a byte.
         var altKey = DemoPrivateKey[..^2] + (DemoPrivateKey[^2] == 'f' ? "ee" : "ff");
-        var sig2 = AsterSigner.Sign(SampleMsg, altKey);
+        var sig2 = Signer.Sign(SampleMsg, altKey);
         Assert.NotEqual(sig1, sig2);
     }
 
@@ -61,7 +61,7 @@ public sealed class AsterSignerTests
     public void Empty_message_signs_without_throwing()
     {
         // Edge case — Aster's API will reject this but the signer shouldn't.
-        var sig = AsterSigner.Sign(string.Empty, DemoPrivateKey);
+        var sig = Signer.Sign(string.Empty, DemoPrivateKey);
         Assert.StartsWith("0x", sig, StringComparison.Ordinal);
         Assert.Equal(2 + 130, sig.Length);
     }

@@ -29,8 +29,8 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
     private readonly ILogger<HyperLiquidClient> _logger;
     private readonly HttpClient _http;
     private readonly bool _ownsHttp;
-    private readonly HlMetaCache _metaCache;
-    private readonly HlWebSocketClient _ws;
+    private readonly MetaCache _metaCache;
+    private readonly WebSocketClient _ws;
 
     /// <summary>Construct a HyperLiquid client with explicit options. Creates an internal <see cref="HttpClient"/>.</summary>
     public HyperLiquidClient(HyperLiquidClientOptions options, ILogger<HyperLiquidClient>? logger = null)
@@ -60,21 +60,21 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
         _options = options;
         _logger = logger ?? NullLogger<HyperLiquidClient>.Instance;
 
-        var info = new HlInfoClient(_http, _options);
-        var nonce = new HlNonce();
-        var exchange = new HlExchangeClient(_http, _options, nonce);
-        _metaCache = new HlMetaCache(info);
-        _ws = new HlWebSocketClient(_options, _logger);
+        var info = new InfoClient(_http, _options);
+        var nonce = new Nonce();
+        var exchange = new ExchangeClient(_http, _options, nonce);
+        _metaCache = new MetaCache(info);
+        _ws = new WebSocketClient(_options, _logger);
 
-        Markets   = new HlMarkets(info);
-        Orders    = new HlOrders(info, exchange, _metaCache, _options);
-        Positions = new HlPositions(info, exchange, _metaCache, _options);
-        Trades    = new HlTrades(info, _options);
-        Account   = new HlAccount(info, exchange, _options);
-        Transfers = new HlTransfers(exchange, _options);
-        Streams   = new HlStreams(_ws, info, _options);
-        Vaults    = new HlVaults(info, exchange, _options);
-        Staking   = new HlStaking(info, exchange, _options);
+        Markets   = new Markets(info);
+        Orders    = new Orders(info, exchange, _metaCache, _options);
+        Positions = new Positions(info, exchange, _metaCache, _options);
+        Trades    = new Trades(info, _options);
+        Account   = new Account(info, exchange, _options);
+        Transfers = new Transfers(exchange, _options);
+        Streams   = new Streams(_ws, info, _options);
+        Vaults    = new Vaults(info, exchange, _options);
+        Staking   = new Staking(info, exchange, _options);
     }
 
     private static HttpClient CreateHttpClient(HyperLiquidClientOptions options)

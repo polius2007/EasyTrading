@@ -22,7 +22,7 @@
   </PropertyGroup>
 
   <PropertyGroup Label="Package metadata" Condition="'$(IsPackable)' != 'false'">
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <PackageReleaseNotes>https://github.com/polius2007/EasyTrading/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <Authors>Elinesoft</Authors>
     <Company>Elinesoft</Company>

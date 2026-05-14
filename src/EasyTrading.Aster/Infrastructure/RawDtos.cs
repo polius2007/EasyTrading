@@ -6,7 +6,7 @@ namespace EasyTrading.Aster.Infrastructure;
 //
 // One file per category, lower camelCase fields matched explicitly with
 // JsonPropertyName attributes (Aster's JSON is camelCase, no exceptions).
-// Numeric values come back as strings to preserve precision — AsterJsonOptions
+// Numeric values come back as strings to preserve precision — JsonOptions
 // turns on NumberHandling.AllowReadingFromString so decimal parses cleanly.
 
 // ── /fapi/v3/exchangeInfo ────────────────────────────────────────────────────

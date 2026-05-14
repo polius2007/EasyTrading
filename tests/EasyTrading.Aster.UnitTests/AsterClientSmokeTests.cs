@@ -67,7 +67,7 @@ public sealed class AsterClientSmokeTests
     [Fact]
     public void Nonce_is_strictly_monotonic()
     {
-        var n = new AsterNonce();
+        var n = new Nonce();
         long a = n.Next();
         long b = n.Next();
         long c = n.Next();

@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] — Drop venue prefix from internal types
+
+Internal-only polish. The public surface (`AsterClient`, `HyperLiquidClient`, options, credentials, network enums, builder, interfaces) is unchanged.
+
+### Changed
+
+Renamed `internal` types in both venues to drop the venue prefix — they live in venue-specific
+namespaces (`EasyTrading.HyperLiquid.Infrastructure`, `EasyTrading.Aster.Modules`, …) so the
+prefix was redundant and noisy in stack traces and code reads. The cross-DEX interfaces
+(`IOrders`, `IAccount`, …) and public client / options types keep their distinctive prefix so
+mixed-venue codebases can import both without collisions.
+
+Examples:
+
+- `HlOrders` → `Orders`        in `EasyTrading.HyperLiquid.Modules`
+- `HlSigner` → `Signer`        in `EasyTrading.HyperLiquid.Infrastructure`
+- `HlWebSocketClient` → `WebSocketClient` in `EasyTrading.HyperLiquid.Infrastructure`
+- `AsterOrders` → `Orders`     in `EasyTrading.Aster.Modules`
+- `AsterRestClient` → `RestClient` in `EasyTrading.Aster.Infrastructure`
+- …and so on for every `internal sealed class` in `Modules/` and `Infrastructure/`.
+
+### Impact
+
+- **Public API**: zero change. Source-compatible for every consumer of `EasyTrading.HyperLiquid`
+  or `EasyTrading.Aster`.
+- **Tests**: in-tree test projects (which reach into internals via `InternalsVisibleTo`) updated
+  in lockstep.
+- **Binary compat**: code that reflected on internal type names would need to update — almost
+  certainly nobody in the wild.
+
+Tests: 89 HL + 25 Aster = **114 green** on `net8.0` + `net9.0`. Build clean.
+
 ## [1.1.0] — Aster Finance client (full surface) + HyperLiquid bumped to 1.1.0
 
 This release ships **EasyTrading.Aster `1.1.0`** with a full Aster Finance V3 surface:

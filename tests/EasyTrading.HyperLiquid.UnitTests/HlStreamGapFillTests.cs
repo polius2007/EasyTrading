@@ -6,8 +6,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace EasyTrading.HyperLiquid.UnitTests;
 
 /// <summary>
-/// Tests for the gap-recovery layer that sits between <see cref="HlWebSocketClient"/> and the
-/// user-scoped streams in <see cref="EasyTrading.HyperLiquid.Modules.HlStreams"/>. The WS
+/// Tests for the gap-recovery layer that sits between <see cref="WebSocketClient"/> and the
+/// user-scoped streams in <see cref="EasyTrading.HyperLiquid.Modules.Streams"/>. The WS
 /// client itself is real; we simulate "live" events by feeding items into a channel and trigger
 /// reconnects by raising the <c>Reconnected</c> event manually via reflection-free helpers.
 /// </summary>
@@ -16,20 +16,20 @@ public sealed class HlStreamGapFillTests
     private sealed record Item(long Id, long TimestampMs);
 
     /// <summary>
-    /// We need to fire <c>Reconnected</c> on the real <c>HlWebSocketClient</c> from tests, but
+    /// We need to fire <c>Reconnected</c> on the real <c>WebSocketClient</c> from tests, but
     /// the event is published only to handlers registered through <c>+=</c>. We construct the
     /// client (which never actually connects in unit tests) and use a small reflection-free
     /// indirection: the test triggers reconnect by directly calling a wrapped helper that
     /// raises the event via a captured delegate.
     /// </summary>
-    private static (HlWebSocketClient Ws, Action TriggerReconnect) MakeWs()
+    private static (WebSocketClient Ws, Action TriggerReconnect) MakeWs()
     {
-        var ws = new HlWebSocketClient(
+        var ws = new WebSocketClient(
             new HyperLiquidClientOptions { Network = HyperLiquidNetwork.Testnet },
             NullLogger.Instance);
 
         // Use reflection ONCE to obtain the event's backing field so tests can pulse it.
-        var field = typeof(HlWebSocketClient).GetField("Reconnected", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var field = typeof(WebSocketClient).GetField("Reconnected", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         return (ws, () =>
         {
             var handler = (Action?)field?.GetValue(ws);
@@ -52,7 +52,7 @@ public sealed class HlStreamGapFillTests
             var fetchCalls = 0;
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
-            var merged = HlStreamGapFill.WithRecoveryAsync(
+            var merged = StreamGapFill.WithRecoveryAsync(
                 live: liveChannel.Reader.ReadAllAsync(cts.Token),
                 ws: ws,
                 fetchSince: (_, _) => { fetchCalls++; return Task.FromResult<IReadOnlyList<Item>>(Array.Empty<Item>()); },
@@ -81,7 +81,7 @@ public sealed class HlStreamGapFillTests
             // REST returns items 5 and 6 — both newer than anything the live stream has seen.
             var fetchCalls = 0;
             var recoveryReady = new TaskCompletionSource();
-            var merged = HlStreamGapFill.WithRecoveryAsync(
+            var merged = StreamGapFill.WithRecoveryAsync(
                 live: liveChannel.Reader.ReadAllAsync(cts.Token),
                 ws: ws,
                 fetchSince: (_, _) =>
@@ -140,7 +140,7 @@ public sealed class HlStreamGapFillTests
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
             var attempts = 0;
-            var merged = HlStreamGapFill.WithRecoveryAsync(
+            var merged = StreamGapFill.WithRecoveryAsync(
                 live: liveChannel.Reader.ReadAllAsync(cts.Token),
                 ws: ws,
                 fetchSince: (_, _) =>

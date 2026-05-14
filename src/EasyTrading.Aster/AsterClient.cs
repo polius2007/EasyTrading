@@ -17,9 +17,9 @@ public sealed class AsterClient : IAsterExchange
     private readonly ILogger<AsterClient> _logger;
     private readonly HttpClient _http;
     private readonly bool _ownsHttp;
-    private readonly AsterMetaCache _metaCache;
-    private readonly AsterWebSocketClient _marketWs;
-    private readonly AsterStreams _streams;
+    private readonly MetaCache _metaCache;
+    private readonly WebSocketClient _marketWs;
+    private readonly Streams _streams;
 
     /// <summary>Construct with explicit options. Creates an internal <see cref="HttpClient"/>.</summary>
     public AsterClient(AsterClientOptions options, ILogger<AsterClient>? logger = null)
@@ -49,23 +49,23 @@ public sealed class AsterClient : IAsterExchange
         _options = options;
         _logger = logger ?? NullLogger<AsterClient>.Instance;
 
-        var nonce = new AsterNonce();
-        var rest = new AsterRestClient(_http, _options, nonce);
-        _metaCache = new AsterMetaCache(rest);
+        var nonce = new Nonce();
+        var rest = new RestClient(_http, _options, nonce);
+        _metaCache = new MetaCache(rest);
 
         var wsBase = _options.GetEffectiveWebSocketUrl();
-        _marketWs = new AsterWebSocketClient(
+        _marketWs = new WebSocketClient(
             urlProvider:      _ => Task.FromResult(wsBase),
             reconnectDelay:   _options.WebSocketReconnectDelay,
             logger:           _logger);
 
-        Markets   = new AsterMarkets(rest);
-        Orders    = new AsterOrders(rest, _metaCache);
-        Positions = new AsterPositions(rest, _metaCache);
-        Trades    = new AsterTrades(rest);
-        Account   = new AsterAccount(rest);
-        Transfers = new AsterTransfers(rest);
-        _streams  = new AsterStreams(_marketWs, rest, _options);
+        Markets   = new Markets(rest);
+        Orders    = new Orders(rest, _metaCache);
+        Positions = new Positions(rest, _metaCache);
+        Trades    = new Trades(rest);
+        Account   = new Account(rest);
+        Transfers = new Transfers(rest);
+        _streams  = new Streams(_marketWs, rest, _options);
         Streams   = _streams;
     }
 

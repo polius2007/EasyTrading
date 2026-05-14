@@ -4,7 +4,7 @@ using Nethereum.Signer;
 namespace EasyTrading.HyperLiquid.UnitTests;
 
 /// <summary>
-/// Smoke tests for <see cref="HlSigner"/>. We can't compare against Python-generated vectors
+/// Smoke tests for <see cref="Signer"/>. We can't compare against Python-generated vectors
 /// without a live cross-check, so we exercise the properties that matter end-to-end:
 /// determinism and "the produced signature is valid ECDSA over the digest the signer claims to hash".
 /// </summary>
@@ -18,7 +18,7 @@ public sealed class HlSignerTests
     public void ActionHash_is_32_bytes()
     {
         var action = new HlMap().Add("type", "order").Add("grouping", "na");
-        var hash = HlSigner.ActionHash(action, vaultAddress: null, nonce: 1_700_000_000_000L, expiresAfter: null);
+        var hash = Signer.ActionHash(action, vaultAddress: null, nonce: 1_700_000_000_000L, expiresAfter: null);
         Assert.Equal(32, hash.Length);
     }
 
@@ -26,8 +26,8 @@ public sealed class HlSignerTests
     public void ActionHash_is_deterministic()
     {
         var build = () => new HlMap().Add("type", "order").Add("grouping", "na");
-        var h1 = HlSigner.ActionHash(build(), null, 12345L, null);
-        var h2 = HlSigner.ActionHash(build(), null, 12345L, null);
+        var h1 = Signer.ActionHash(build(), null, 12345L, null);
+        var h2 = Signer.ActionHash(build(), null, 12345L, null);
         Assert.Equal(h1, h2);
     }
 
@@ -35,8 +35,8 @@ public sealed class HlSignerTests
     public void ActionHash_changes_with_nonce()
     {
         var build = () => new HlMap().Add("type", "order");
-        var h1 = HlSigner.ActionHash(build(), null, 1L, null);
-        var h2 = HlSigner.ActionHash(build(), null, 2L, null);
+        var h1 = Signer.ActionHash(build(), null, 1L, null);
+        var h2 = Signer.ActionHash(build(), null, 2L, null);
         Assert.NotEqual(h1, h2);
     }
 
@@ -44,8 +44,8 @@ public sealed class HlSignerTests
     public void ActionHash_changes_with_vault_address()
     {
         var build = () => new HlMap().Add("type", "order");
-        var none = HlSigner.ActionHash(build(), null, 1L, null);
-        var withVault = HlSigner.ActionHash(build(), "0x0000000000000000000000000000000000000001", 1L, null);
+        var none = Signer.ActionHash(build(), null, 1L, null);
+        var withVault = Signer.ActionHash(build(), "0x0000000000000000000000000000000000000001", 1L, null);
         Assert.NotEqual(none, withVault);
     }
 
@@ -53,7 +53,7 @@ public sealed class HlSignerTests
     public void L1_signature_is_well_formed()
     {
         var action = new HlMap().Add("type", "order").Add("grouping", "na");
-        var sig = HlSigner.SignL1Action(action, vaultAddress: null, nonce: 1_700_000_000_000L,
+        var sig = Signer.SignL1Action(action, vaultAddress: null, nonce: 1_700_000_000_000L,
             expiresAfter: null, isMainnet: true, privateKeyHex: TestPrivateKey);
 
         // r and s are 0x-prefixed 32-byte hex strings → 2 + 64 chars.
@@ -71,8 +71,8 @@ public sealed class HlSignerTests
     {
         // RFC 6979 deterministic ECDSA: same private key + same digest → same signature.
         var build = () => new HlMap().Add("type", "order").Add("grouping", "na");
-        var s1 = HlSigner.SignL1Action(build(), null, 1L, null, isMainnet: true, TestPrivateKey);
-        var s2 = HlSigner.SignL1Action(build(), null, 1L, null, isMainnet: true, TestPrivateKey);
+        var s1 = Signer.SignL1Action(build(), null, 1L, null, isMainnet: true, TestPrivateKey);
+        var s2 = Signer.SignL1Action(build(), null, 1L, null, isMainnet: true, TestPrivateKey);
         Assert.Equal(s1, s2);
     }
 
@@ -81,8 +81,8 @@ public sealed class HlSignerTests
     {
         // The phantom-agent "source" field differs ("a" vs "b"), so the signed digest differs.
         var build = () => new HlMap().Add("type", "order").Add("grouping", "na");
-        var sigMain = HlSigner.SignL1Action(build(), null, 1L, null, isMainnet: true,  TestPrivateKey);
-        var sigTest = HlSigner.SignL1Action(build(), null, 1L, null, isMainnet: false, TestPrivateKey);
+        var sigMain = Signer.SignL1Action(build(), null, 1L, null, isMainnet: true,  TestPrivateKey);
+        var sigTest = Signer.SignL1Action(build(), null, 1L, null, isMainnet: false, TestPrivateKey);
         Assert.NotEqual(sigMain, sigTest);
     }
 
@@ -105,7 +105,7 @@ public sealed class HlSignerTests
             .Add("nonce", 1_700_000_000_000L)
             .Add("signatureChainId", "0x66eee");
 
-        var sig = HlSigner.SignUserAction(message, "UsdClassTransfer", schema, TestPrivateKey);
+        var sig = Signer.SignUserAction(message, "UsdClassTransfer", schema, TestPrivateKey);
 
         Assert.StartsWith("0x", sig.R);
         Assert.Equal(66, sig.R.Length);

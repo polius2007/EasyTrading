@@ -10,14 +10,14 @@ namespace EasyTrading.HyperLiquid.UnitTests;
 /// </summary>
 public sealed class HlMapperTests
 {
-    private static readonly JsonSerializerOptions Json = HlJsonOptions.Default;
+    private static readonly JsonSerializerOptions Json = JsonOptions.Default;
 
     [Theory]
     [InlineData("B", OrderSide.Buy)]
     [InlineData("A", OrderSide.Sell)]
     public void ParseSide_maps_HL_letters(string raw, OrderSide expected)
     {
-        Assert.Equal(expected, HlMapper.ParseSide(raw));
+        Assert.Equal(expected, Mapper.ParseSide(raw));
     }
 
     [Theory]
@@ -31,8 +31,8 @@ public sealed class HlMapperTests
     [InlineData("1M", Interval.OneMonth)]
     public void ParseInterval_round_trips(string raw, Interval expected)
     {
-        Assert.Equal(expected, HlMapper.ParseInterval(raw));
-        Assert.Equal(raw, HlMapper.SerializeInterval(expected));
+        Assert.Equal(expected, Mapper.ParseInterval(raw));
+        Assert.Equal(raw, Mapper.SerializeInterval(expected));
     }
 
     [Theory]
@@ -44,7 +44,7 @@ public sealed class HlMapperTests
     [InlineData("triggered", OrderStatus.Triggered)]
     public void ParseOrderStatus_covers_the_common_values(string raw, OrderStatus expected)
     {
-        Assert.Equal(expected, HlMapper.ParseOrderStatus(raw));
+        Assert.Equal(expected, Mapper.ParseOrderStatus(raw));
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public sealed class HlMapperTests
         """;
 
         var raw = JsonSerializer.Deserialize<L2BookRaw>(json, Json)!;
-        var book = HlMapper.Map(raw);
+        var book = Mapper.Map(raw);
 
         Assert.Equal("BTC", book.Symbol);
         Assert.Equal(2, book.Bids.Count);
@@ -97,7 +97,7 @@ public sealed class HlMapperTests
         """;
 
         var raw = JsonSerializer.Deserialize<CandleRaw>(json, Json)!;
-        var candle = HlMapper.Map(raw);
+        var candle = Mapper.Map(raw);
 
         Assert.Equal("BTC", candle.Symbol);
         Assert.Equal(Interval.FifteenMinutes, candle.Interval);
@@ -131,7 +131,7 @@ public sealed class HlMapperTests
         """;
 
         var raw = JsonSerializer.Deserialize<PositionRaw>(json, Json)!;
-        var pos = HlMapper.Map(raw);
+        var pos = Mapper.Map(raw);
 
         Assert.Equal("BTC", pos.Symbol);
         Assert.Equal(-0.5m, pos.Size);
@@ -165,7 +165,7 @@ public sealed class HlMapperTests
         """;
 
         var raw = JsonSerializer.Deserialize<UserFillRaw>(json, Json)!;
-        var fill = HlMapper.Map(raw);
+        var fill = Mapper.Map(raw);
 
         Assert.Equal(42L, fill.TradeId);
         Assert.Equal(99L, fill.OrderId);
@@ -204,7 +204,7 @@ public sealed class HlMapperTests
         var perp = JsonSerializer.Deserialize<ClearinghouseStateRaw>(perpJson, Json)!;
         var spot = JsonSerializer.Deserialize<SpotClearinghouseStateRaw>(spotJson, Json)!;
 
-        var state = HlMapper.MapAccountState(perp, spot.Balances);
+        var state = Mapper.MapAccountState(perp, spot.Balances);
 
         Assert.Equal(1000m, state.AccountValue);
         Assert.Equal(950.5m, state.FreeCollateral);
@@ -236,7 +236,7 @@ public sealed class HlMapperTests
         """;
 
         var raw = JsonSerializer.Deserialize<OpenOrderRaw>(json, Json)!;
-        var order = HlMapper.Map(raw);
+        var order = Mapper.Map(raw);
 
         Assert.Equal(91490942L, order.OrderId);
         Assert.Equal("BTC", order.Symbol);
@@ -261,7 +261,7 @@ public sealed class HlMapperTests
         """;
 
         using var doc = JsonDocument.Parse(json);
-        var portfolio = HlMapper.MapPortfolio(doc.RootElement);
+        var portfolio = Mapper.MapPortfolio(doc.RootElement);
 
         Assert.Equal(2, portfolio.AccountValueHistory.Count);
         Assert.Equal(120.0m, portfolio.AccountValueHistory[1].Value);
@@ -282,7 +282,7 @@ public sealed class HlMapperTests
         """;
 
         var raw = JsonSerializer.Deserialize<UserRateLimitRaw>(json, Json)!;
-        var rl = HlMapper.Map(raw);
+        var rl = Mapper.Map(raw);
 
         Assert.Equal(2890, rl.Used);
         Assert.Equal(2864574, rl.Limit);
