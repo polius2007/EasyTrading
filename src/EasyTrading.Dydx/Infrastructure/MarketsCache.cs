@@ -98,13 +98,19 @@ internal sealed record MarketInfo(
     }
 
     /// <summary>
-    /// <c>subticks = price × 10^(quoteAtomicResolution − atomicResolution − quantumConversionExponent)</c>.
-    /// For BTC-USD (atomicResolution=-10, quantumConversionExponent=-9, quoteAtomicResolution=-6),
-    /// price 60000 → 6 × 10^17 subticks.
+    /// <c>subticks = price × 10^(atomicResolution − quoteAtomicResolution − quantumConversionExponent)</c>.
+    /// <para>Derivation: at <c>subticks = S</c>, one base_quantum costs <c>S × 10^qce</c> quote_quantums;
+    /// therefore 1 base unit (= 10^(-atomicResolution) base_quantums) costs
+    /// <c>S × 10^(qce − atomicResolution)</c> quote_quantums = <c>S × 10^(qce − atomicResolution + quoteAtomicResolution)</c>
+    /// quote units. Inverting: <c>S = price × 10^(atomicResolution − quoteAtomicResolution − qce)</c>.</para>
+    /// <para>For BTC-USD (atomicResolution=-10, quantumConversionExponent=-9, quoteAtomicResolution=-6):
+    /// exponent = -10 - (-6) - (-9) = 5, so price 60000 → 6 × 10^9 subticks. This matches the
+    /// per-market <c>subticksPerTick</c> the Indexer publishes (100,000 for BTC at tickSize=$1, i.e.
+    /// 1 USD price step = 100,000 subticks).</para>
     /// </summary>
     public ulong ToSubticks(decimal price)
     {
-        var exponent = MarketsCache.QuoteAtomicResolution - AtomicResolution - QuantumConversionExponent;
+        var exponent = AtomicResolution - MarketsCache.QuoteAtomicResolution - QuantumConversionExponent;
         var scaled = price * Pow10(exponent);
         if (scaled < 0m) throw new ArgumentOutOfRangeException(nameof(price), "price must be non-negative");
         if (scaled > ulong.MaxValue)

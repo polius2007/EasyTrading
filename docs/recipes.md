@@ -203,9 +203,8 @@ public sealed class Strategy(IExchangeClient ex)
 }
 ```
 
-Switching venues is one line of DI registration. Aster ships the same `IExchangeClient`
-contract today; dYdX v4 implements it too in tree (NuGet release after the testnet
-order-broadcast verification).
+Switching venues is one line of DI registration. Aster and dYdX v4 ship the same
+`IExchangeClient` contract today.
 
 ## Run in a hosted service
 

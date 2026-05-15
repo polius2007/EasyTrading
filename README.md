@@ -15,14 +15,9 @@ A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClie
 
 | Exchange    | Package                              | REST | WebSocket | Signing | Latest                              |
 |-------------|--------------------------------------|:----:|:---------:|:-------:|:-----------------------------------:|
-| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅  |    ✅     |   ✅    | `1.1.1`                             |
-| Aster       | `EasyTrading.Aster`                  |  ✅  |    ✅     |   ✅    | `1.1.1`                             |
-| dYdX v4     | `EasyTrading.Dydx`                   |  ✅  |    ✅     |   ✅\*   | in tree *(awaiting testnet verify)* |
-
-*\* dYdX v4 writes use full Cosmos SDK transaction signing (secp256k1 + protobuf + REST broadcast).
-The address-derivation and account-query halves of the pipeline are end-to-end verified against
-the live testnet validator; the broadcast half is wired but awaits a funded testnet wallet's
-green light before NuGet publication. See [CHANGELOG](CHANGELOG.md#unreleased) for details.*
+| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅  |    ✅     |   ✅    | `1.2.0`                             |
+| Aster       | `EasyTrading.Aster`                  |  ✅  |    ✅     |   ✅    | `1.2.0`                             |
+| dYdX v4     | `EasyTrading.Dydx`                   |  ✅  |    ✅     |   ✅    | `1.2.0`                             |
 
 Coverage summary:
 
@@ -37,14 +32,15 @@ Coverage summary:
   domain. Pre-flight validator wired to `/fapi/v3/exchangeInfo` filters (PRICE_FILTER /
   LOT_SIZE / MIN_NOTIONAL). WebSocket: Binance-style multiplex (market + listenKey-bound
   user streams with 30-min keepalive).
-- **dYdX v4** — full Cosmos SDK signing pipeline in tree. Indexer REST + public WebSocket +
-  signed Indexer reads + Cosmos transaction assembly (BIP-39 → bech32 → protobuf `TxRaw` →
-  REST broadcast) all wired. Address derivation + account-query side verified end-to-end
-  against the live testnet validator. Order-broadcast verification awaits a funded testnet
-  wallet — see [CHANGELOG](CHANGELOG.md#unreleased) for run instructions. NuGet release
-  (`EasyTrading.Dydx 1.2.0`) follows once verified.
+- **dYdX v4** is stable. Indexer REST + public WebSocket + signed Indexer reads + full
+  Cosmos SDK transaction assembly (BIP-39 → BIP-32 → secp256k1 → bech32 → protobuf `TxRaw`
+  → REST broadcast). End-to-end verified on testnet: `Testnet_PlaceLimit_and_Cancel` places
+  a far-from-market post-only BTC-USD buy from a freshly-faucet-funded wallet and cancels
+  it; the chain accepts both. `dydx-mainnet-1` and `dydx-testnet-4` chain IDs supported
+  out of the box.
 
-**Tests:** 125 unit + 14 integration (live mainnet across HL, Aster, dYdX), all green.
+**Tests:** 146 unit + 16 integration (live mainnet across HL, Aster, dYdX, plus dYdX
+testnet PlaceLimit + Cancel write verification), all green.
 
 ## Install
 
@@ -137,9 +133,9 @@ Methods are grouped by entity. Everything about orders is on `Orders`; everythin
 
 ## Roadmap
 
-- [x] HyperLiquid — REST + WebSocket + EIP-712 signing + hardening → `1.1.1`
-- [x] Aster — REST + WebSocket + EIP-712 signing → `1.1.1`
-- [x] dYdX v4 — Indexer REST + WebSocket + Cosmos SDK signing (BIP-39 → BIP-32 → secp256k1 → bech32, full proto stack, REST broadcast). `EasyTrading.Dydx` publishes to NuGet once `DYDX_TESTNET_MNEMONIC` end-to-end test goes green from a funded wallet.
+- [x] HyperLiquid — REST + WebSocket + EIP-712 signing + hardening → `1.2.0`
+- [x] Aster — REST + WebSocket + EIP-712 signing → `1.2.0`
+- [x] dYdX v4 — Indexer REST + WebSocket + Cosmos SDK signing (BIP-39 → BIP-32 → secp256k1 → bech32, full proto stack, REST broadcast), end-to-end verified on testnet → `1.2.0`
 
 ## Documentation
 

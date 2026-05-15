@@ -7,14 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Phase 7.2 — dYdX Cosmos signing: full write pipeline (in tree, not published)
+## [1.2.0] — dYdX v4 goes live on NuGet
 
-Lands the complete Cosmos SDK transaction-signing path for dYdX v4. Markets reads
-(Phase 7.0) and Indexer signed reads (Phase 7.1) were already wired; Phase 7.2 closes
-the loop with end-to-end signed writes through the validator's REST broadcast
-endpoint. The package stays `<IsPackable>false</IsPackable>` until the live testnet
-order-placement test (gated by `DYDX_TESTNET_MNEMONIC`) goes green from a funded
-wallet — at which point a `1.2.0` release tags `EasyTrading.Dydx` for NuGet.
+Lands the complete Cosmos SDK transaction-signing path for dYdX v4 and ships it.
+Markets reads (Phase 7.0) and Indexer signed reads (Phase 7.1) were already wired;
+Phase 7.2 closes the loop with end-to-end signed writes through the validator's
+REST broadcast endpoint. Verified end-to-end on testnet (PlaceLimit + Cancel of a
+far-from-market BTC-USD post-only buy from a freshly-generated, faucet-funded
+wallet — chain accepts both the placement and the cancel), so `EasyTrading.Dydx`
+flips to `<IsPackable>true</IsPackable>` and publishes alongside HL / Aster at 1.2.0.
+
+### Fixed — dYdX subticks formula
+
+- **`MarketsCache.ToSubticks`** — sign bug in the exponent caused subticks to be
+  scaled by `10^13` instead of `10^5` for BTC-USD, i.e. every order was 10⁸ times
+  bigger than intended. The chain rejected with `NewlyUndercollateralized` even
+  for trivial sizes. Derivation corrected to
+  `subticks = price × 10^(atomicResolution − quoteAtomicResolution − qce)`
+  (was: `quoteAtomic − atomic − qce` with a flipped sign on the first two terms).
+  Cross-checked against the Indexer's `subticksPerTick` for BTC: at tickSize=$1
+  and subticksPerTick=100,000, one USD step = 10⁵ subticks. The `MarketsCacheTests`
+  expected values are corrected to match.
 
 Added — Cosmos signing foundation:
 
@@ -80,37 +93,36 @@ Tests — 145 unit + 6 integration green:
   Keplr / Leap produce for the BIP-39 test mnemonic.
 - `TransactionBuilderTests` (5) — deterministic bytes for same inputs, parseable
   `TxRaw`, signature differs by sequence / chain_id, Cosmos-correct typeUrl prefix.
-- `MarketsCacheTests` (5) — quantum / subtick conversion matches cosmpy reference
-  for BTC-USD (`humanSize × 10^10`, `humanPrice × 10^13`) and rejects negative inputs.
+- `MarketsCacheTests` (5) — quantum / subtick conversion matches the on-chain
+  reference for BTC-USD (`humanSize × 10^10` quantums, `humanPrice × 10^5`
+  subticks) and rejects negative inputs.
 - `DydxClientSmokeTests` (12) — construction, URL resolution, capability flags,
   AuthenticationException on signed paths without credentials.
-- `DydxIntegrationTests` (6) — live mainnet reads (perpetualMarkets, depth,
-  allMids), WS trades for BTC-USD, **plus the new end-to-end validator check:
-  the test mnemonic's address (`dydx19rl4cm2hmr8afy4kldpxz3fka4jguq0a4erelz`)
-  exists on testnet with `account_number 97601`, `sequence 45` — proving address
-  derivation matches what the chain has on-record and CosmosClient correctly
-  parses the BaseAccount payload.**
-- `DydxIntegrationTests.Testnet_PlaceLimit_and_Cancel_with_mnemonic_from_env` —
-  reads `DYDX_TESTNET_MNEMONIC` from env, derives the address, places a far-from-
-  market post-only buy + cancels by client id. Skips silently if the env var
-  isn't set (so library users without a testnet wallet still get green tests).
+- `DydxIntegrationTests` (6 reads + 1 write) — live mainnet reads
+  (perpetualMarkets, depth, allMids), WS trades for BTC-USD, the validator
+  account-query for the well-known test mnemonic, **and the end-to-end
+  Testnet_PlaceLimit_and_Cancel write**: places a far-from-market post-only
+  BTC-USD buy at half the live mid and cancels it by client id; the chain
+  accepts both placements. Gated by `DYDX_TESTNET_MNEMONIC` so library users
+  without a testnet wallet still get green tests by default.
+- `TestnetBootstrap` (1) — gated helper that generates a fresh BIP-39 mnemonic,
+  derives the `dydx1…` address, and POSTs to the public testnet faucet at
+  `https://faucet.v4testnet.dydx.exchange/faucet/tokens` to seed a brand-new
+  wallet with USDC. Persists the mnemonic to `%TEMP%/easytrading-dydx-testnet.mnemonic`
+  so the follow-up write test can pick it up via `DYDX_TESTNET_MNEMONIC`. Gated
+  by `EASYTRADING_BOOTSTRAP_FAUCET=1` + `EASYTRADING_INTEGRATION=1` — never runs
+  in CI.
 
-Honest status:
+### Earlier dYdX phases folded into 1.2.0
 
-- Address derivation, transaction assembly, and the account-query side of the
-  pipeline are **verified end-to-end against the live testnet validator**.
-- Order broadcast (the actual MsgPlaceOrder → TxRaw → POST → on-chain order)
-  is implemented but **not yet verified end-to-end** — that requires a funded
-  testnet wallet. Run the gated integration test from a wallet with a few
-  testnet USDC (faucet: https://faucet.v4testnet.dydx.exchange) and we know
-  for certain. Once verified, IsPackable=true and EasyTrading.Dydx 1.2.0 ships.
+Phases 7.0 (Indexer REST + public WebSocket), 7.1 (signed Indexer reads), and 7.2
+(Cosmos SDK transaction signing) shipped together in 1.2.0. The release notes
+below are the original phase entries kept for archaeological reference.
 
-### Phase 7.0 — `EasyTrading.Dydx` scaffold (in tree, not published)
+#### Phase 7.0 — `EasyTrading.Dydx` scaffold
 
 First dYdX v4 work. The scaffold landed under `src/EasyTrading.Dydx/` with
-`<IsPackable>false</IsPackable>` — Markets reads + public WebSocket streams work end-to-end
-against live mainnet. Signed reads (Phase 7.1) and Cosmos SDK transaction signing (Phase 7.2)
-are next; the package goes to NuGet once 7.2 lands.
+Markets reads + public WebSocket streams working end-to-end against live mainnet.
 
 #### Added — `EasyTrading.Dydx`
 

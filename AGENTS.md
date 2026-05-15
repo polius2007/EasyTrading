@@ -13,7 +13,7 @@ EasyTrading is a multi-DEX trading client for .NET. The same `IExchangeClient` i
 
 ## Current status per venue
 
-**HyperLiquid `1.1.1`** — stable. Read / write / stream all functional against live mainnet.
+**HyperLiquid `1.2.0`** — stable. Read / write / stream all functional against live mainnet.
 EIP-712 L1 (phantom-agent) + user-signed flavours. WebSocket: 9 channels with reconnect +
 per-subscriber back-pressure. Pre-flight order validation (tick / lot / min-notional).
 REST retry policy with backoff + jitter and `Retry-After`. WebSocket gap recovery on user
@@ -21,20 +21,19 @@ streams (`MyFills` / `MyOrders` / `MyFundings`) — REST catch-up on each reconn
 dedup. Builder-fee routing is automatic; the library calls `approveBuilderFee` once per
 trader transparently.
 
-**Aster Finance `1.1.1`** — stable. Same surface, EIP-712 signing under
+**Aster Finance `1.2.0`** — stable. Same surface, EIP-712 signing under
 `AsterSignTransaction` v1 / chainId 1666. Pre-flight validator wired to
 `/fapi/v3/exchangeInfo` filters (PRICE_FILTER / LOT_SIZE / MIN_NOTIONAL). WebSocket:
 Binance-style multiplex for market data + a separate listenKey-bound socket for user
 data with 30-min keepalive.
 
-**dYdX v4** — full Cosmos SDK signing stack in tree (`src/EasyTrading.Dydx/`). Indexer
-reads + public WebSocket + signed Indexer reads + Cosmos transaction signing (BIP-39 →
-BIP-32 → secp256k1 → bech32 → protobuf-encoded TxRaw → REST broadcast) all wired.
-Address derivation + account-query are end-to-end verified against the live testnet
-validator. Order broadcast (`Orders.PlaceLimitAsync`, `CancelByClientIdAsync`) is
-implemented but waits on a funded-wallet integration run before NuGet publication —
-set `DYDX_TESTNET_MNEMONIC` and run the gated `Testnet_PlaceLimit_and_Cancel`
-integration test to verify.
+**dYdX v4 `1.2.0`** — stable. Indexer REST + public WebSocket + signed Indexer reads +
+full Cosmos SDK transaction signing (BIP-39 → BIP-32 → secp256k1 → bech32 → protobuf
+`TxRaw` → REST broadcast). End-to-end verified on testnet: `Testnet_PlaceLimit_and_Cancel`
+posts a far-from-market post-only BTC-USD buy from a freshly-faucet-funded wallet and
+cancels by client id; the validator accepts both. Defaults to the polkachu community
+endpoints (`dydx-dao-api.polkachu.com` for mainnet, `dydx-testnet-api.polkachu.com` for
+testnet) with `dydx-mainnet-1` / `dydx-testnet-4` chain ids.
 
 ## Core conventions (apply always)
 

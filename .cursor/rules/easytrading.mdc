@@ -5,20 +5,19 @@ alwaysApply: true
 
 # EasyTrading
 
-Multi-DEX trading client for .NET. HyperLiquid + Aster are live on NuGet (both `1.1.1`); dYdX v4 is in tree with the full Cosmos SDK signing stack and awaits a funded-wallet test before NuGet release. See `AGENTS.md` for full guidance.
+Multi-DEX trading client for .NET. HyperLiquid, Aster, and dYdX v4 are all live on NuGet at `1.2.0`. See `AGENTS.md` for full guidance.
 
 ## Status
 
-- **HyperLiquid `1.1.1`** — stable. EIP-712 signed reads + writes + WebSocket. Pre-flight order
+- **HyperLiquid `1.2.0`** — stable. EIP-712 signed reads + writes + WebSocket. Pre-flight order
   validation, REST retry policy (backoff + jitter + Retry-After), WS gap recovery on user
   streams, automatic builder-fee routing.
-- **Aster `1.1.1`** — stable. Same surface, EIP-712 `AsterSignTransaction` signing. WebSocket:
+- **Aster `1.2.0`** — stable. Same surface, EIP-712 `AsterSignTransaction` signing. WebSocket:
   Binance-style multiplex with listenKey-bound user streams + 30-min keepalive.
-- **dYdX v4** — full Cosmos SDK signing stack in tree (`src/EasyTrading.Dydx/`). Indexer
-  reads + public WS + signed reads + Cosmos transaction signing (BIP-39 → BIP-32 →
-  secp256k1 → bech32 → protobuf TxRaw → REST broadcast) all wired. Address derivation +
-  account query verified end-to-end on testnet; order broadcast awaits funded-wallet test.
-  Publishes to NuGet once `DYDX_TESTNET_MNEMONIC` test goes green.
+- **dYdX v4 `1.2.0`** — stable. Indexer REST + public WS + signed Indexer reads + full Cosmos
+  SDK transaction signing (BIP-39 → BIP-32 → secp256k1 → bech32 → protobuf TxRaw → REST
+  broadcast). End-to-end verified on testnet (`Testnet_PlaceLimit_and_Cancel` places + cancels
+  a far-from-market BTC-USD post-only buy from a faucet-funded wallet; chain accepts both).
 
 ## Core rules
 

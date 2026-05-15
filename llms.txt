@@ -1,6 +1,6 @@
 # EasyTrading
 
-> A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClient` interface across every supported DEX. HyperLiquid and Aster are at `1.1.1` on NuGet (both REST + WebSocket + EIP-712 signing with pre-flight validation, retry policy, gap recovery). dYdX v4 implements the same surface end-to-end in tree (full Cosmos SDK signing stack: BIP-39 → bech32 → protobuf TxRaw → REST broadcast); publishes to NuGet once the testnet order-broadcast verification goes green. Methods grouped by entity (Markets, Orders, Positions, Trades, Account, Transfers, Streams). `decimal` for money; `IAsyncEnumerable<T>` for streams; typed exceptions.
+> A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClient` interface across every supported DEX. HyperLiquid, Aster, and dYdX v4 are all at `1.2.0` on NuGet — REST + WebSocket + signing on each, with pre-flight validation, retry policy, and gap recovery. HyperLiquid + Aster sign EIP-712; dYdX v4 signs Cosmos SDK transactions (BIP-39 → BIP-32 → secp256k1 → bech32 → protobuf TxRaw → REST broadcast), end-to-end verified on testnet. Methods grouped by entity (Markets, Orders, Positions, Trades, Account, Transfers, Streams). `decimal` for money; `IAsyncEnumerable<T>` for streams; typed exceptions.
 
 ## Documentation
 
@@ -13,11 +13,11 @@
 
 ## Packages
 
-- [EasyTrading.HyperLiquid](https://www.nuget.org/packages/EasyTrading.HyperLiquid): HyperLiquid client (REST + WebSocket + EIP-712 signing), stable at 1.1.1
-- [EasyTrading.Aster](https://www.nuget.org/packages/EasyTrading.Aster): Aster Finance perp DEX client (REST + WebSocket + EIP-712 signing), stable at 1.1.1
+- [EasyTrading.HyperLiquid](https://www.nuget.org/packages/EasyTrading.HyperLiquid): HyperLiquid client (REST + WebSocket + EIP-712 signing), stable at 1.2.0
+- [EasyTrading.Aster](https://www.nuget.org/packages/EasyTrading.Aster): Aster Finance perp DEX client (REST + WebSocket + EIP-712 signing), stable at 1.2.0
+- [EasyTrading.Dydx](https://www.nuget.org/packages/EasyTrading.Dydx): dYdX v4 client (Indexer REST + WebSocket + full Cosmos SDK transaction signing: BIP-39 → secp256k1 → bech32 → protobuf TxRaw → REST broadcast), stable at 1.2.0
 - [EasyTrading.Abstractions](https://www.nuget.org/packages/EasyTrading.Abstractions): Cross-DEX interfaces and models (IExchangeClient, IEasyTradingBuilder, all DTOs)
 - [EasyTrading.Core](https://www.nuget.org/packages/EasyTrading.Core): Shared infrastructure (HTTP, WS, retries, signing helpers)
-- EasyTrading.Dydx: dYdX v4 client — full Cosmos SDK signing stack in tree (BIP-39 → secp256k1 → bech32 → protobuf TxRaw → REST broadcast). Address derivation + account query verified end-to-end on testnet. Publishes to NuGet once order-broadcast test goes green from a funded testnet wallet.
 
 ## Source
 

@@ -12,8 +12,14 @@ public sealed class MarketsCacheTests
     // BTC-USD shape on dYdX testnet:
     //   atomicResolution          = -10  (size has 10 decimals on-chain)
     //   quantumConversionExponent = -9
+    //   quoteAtomicResolution     = -6   (USDC has 6 decimals)
     // → quantums = humanSize × 10^10
-    // → subticks = humanPrice × 10^(-6 - (-10) - (-9)) = humanPrice × 10^13
+    // → subticks = humanPrice × 10^(atomic_resolution - quote_atomic_resolution - qce)
+    //            = humanPrice × 10^(-10 - (-6) - (-9))
+    //            = humanPrice × 10^5
+    //
+    // Cross-check vs. Indexer's `/perpetualMarkets`: for BTC subticksPerTick=100000 at
+    // tickSize=$1, i.e. 1 USD price step → 100,000 subticks → 1 USDC = 10^5 subticks ✓.
     private static readonly MarketInfo BtcUsd = new(
         Ticker:                    "BTC-USD",
         ClobPairId:                0,
@@ -31,12 +37,12 @@ public sealed class MarketsCacheTests
     }
 
     [Fact]
-    public void Subticks_for_BTC_uses_10_pow_13()
+    public void Subticks_for_BTC_uses_10_pow_5()
     {
-        // 1 USD → 10^13 subticks
-        Assert.Equal(10_000_000_000_000UL, BtcUsd.ToSubticks(1m));
-        // 60000 USD → 6 × 10^17 subticks
-        Assert.Equal(600_000_000_000_000_000UL, BtcUsd.ToSubticks(60_000m));
+        // 1 USD → 10^5 subticks
+        Assert.Equal(100_000UL, BtcUsd.ToSubticks(1m));
+        // 60,000 USD → 6 × 10^9 subticks
+        Assert.Equal(6_000_000_000UL, BtcUsd.ToSubticks(60_000m));
     }
 
     [Fact]

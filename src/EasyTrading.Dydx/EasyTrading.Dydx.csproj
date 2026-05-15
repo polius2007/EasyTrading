@@ -7,12 +7,9 @@
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>$(PackageTags);dydx;dydx-v4;cosmos;perp;secp256k1</PackageTags>
 
-    <!-- Full Cosmos SDK signing pipeline (BIP-39 → bech32 → protobuf TxRaw → REST
-         broadcast) is in tree. Address derivation + account-query side verified
-         end-to-end against the live testnet validator. Awaiting a funded-wallet
-         run of the DYDX_TESTNET_MNEMONIC integration test (PlaceLimit + Cancel
-         through the validator) before flipping this to true and shipping 1.2.0. -->
-    <IsPackable>false</IsPackable>
+    <!-- Full Cosmos SDK signing pipeline: BIP-39 → bech32 → protobuf TxRaw → REST broadcast,
+         verified end-to-end on testnet (DYDX_TESTNET_MNEMONIC PlaceLimit + Cancel goes green). -->
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
