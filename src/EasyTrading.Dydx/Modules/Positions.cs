@@ -6,8 +6,9 @@ using EasyTrading.Dydx.Infrastructure;
 namespace EasyTrading.Dydx.Modules;
 
 /// <summary>dYdX implementation of <see cref="IPositions"/>. Reads come from
-/// <c>/perpetualPositions?address=…&amp;subaccountNumber=N</c>. Writes (SetLeverage, AddMargin,
-/// Close) require Cosmos SDK transaction signing and land in Phase 7.2.</summary>
+/// <c>/perpetualPositions?address=…&amp;subaccountNumber=N</c>. Cross-margin leverage on dYdX v4
+/// is account-wide (no per-symbol setting); explicit margin add / remove writes are on the
+/// follow-up roadmap and currently throw <see cref="NotSupportedException"/> with guidance.</summary>
 internal sealed class Positions(RestClient rest, DydxClientOptions options) : IPositions
 {
     public async Task<IReadOnlyList<Position>> GetAllAsync(CancellationToken ct = default)
@@ -29,11 +30,11 @@ internal sealed class Positions(RestClient rest, DydxClientOptions options) : IP
         return all.FirstOrDefault(p => string.Equals(p.Symbol, symbol, StringComparison.OrdinalIgnoreCase));
     }
 
-    public Task SetLeverageAsync(string symbol, int leverage, MarginMode marginMode, CancellationToken ct = default) => throw new NotImplementedException(Phase.Write);
-    public Task SetMarginModeAsync(string symbol, MarginMode marginMode, CancellationToken ct = default) => throw new NotImplementedException(Phase.Write);
-    public Task AddMarginAsync(string symbol, decimal amount, CancellationToken ct = default) => throw new NotImplementedException(Phase.Write);
-    public Task ReduceMarginAsync(string symbol, decimal amount, CancellationToken ct = default) => throw new NotImplementedException(Phase.Write);
-    public Task<PlaceOrderResult> CloseAsync(string symbol, CancellationToken ct = default) => throw new NotImplementedException(Phase.Write);
+    public Task SetLeverageAsync(string symbol, int leverage, MarginMode marginMode, CancellationToken ct = default) => throw new NotImplementedException(Phase.PositionWrite);
+    public Task SetMarginModeAsync(string symbol, MarginMode marginMode, CancellationToken ct = default) => throw new NotImplementedException(Phase.PositionWrite);
+    public Task AddMarginAsync(string symbol, decimal amount, CancellationToken ct = default) => throw new NotImplementedException(Phase.PositionWrite);
+    public Task ReduceMarginAsync(string symbol, decimal amount, CancellationToken ct = default) => throw new NotImplementedException(Phase.PositionWrite);
+    public Task<PlaceOrderResult> CloseAsync(string symbol, CancellationToken ct = default) => throw new NotImplementedException(Phase.PositionWrite);
 
     private DydxCredentials RequireCreds() => options.Credentials
         ?? throw new AuthenticationException(

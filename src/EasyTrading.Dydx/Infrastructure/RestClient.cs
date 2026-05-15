@@ -6,9 +6,10 @@ using EasyTrading.Abstractions;
 namespace EasyTrading.Dydx.Infrastructure;
 
 /// <summary>
-/// REST wrapper for the dYdX v4 Indexer. Public reads only at this phase — signed-write
-/// (Cosmos SDK transaction broadcast) lives behind a gRPC validator path implemented in
-/// Phase 7.2.
+/// REST wrapper for the dYdX v4 Indexer (read-only endpoints: markets, orderbook, candles,
+/// trades, perpetualPositions, fills, etc). Signed-write Cosmos SDK transactions go through
+/// a separate <see cref="CosmosClient"/> that broadcasts <c>TxRaw</c> bytes to the validator's
+/// REST gateway at <c>/cosmos/tx/v1beta1/txs</c>.
 /// </summary>
 internal sealed class RestClient
 {

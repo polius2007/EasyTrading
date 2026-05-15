@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <PackageId>EasyTrading.Dydx</PackageId>
-    <Description>dYdX v4 perpetual DEX client for .NET — Indexer REST + WebSocket + Cosmos SDK transaction signing. Implements EasyTrading.Abstractions for cross-DEX strategies.</Description>
+    <Description>dYdX v4 perpetual DEX client for .NET — Indexer REST + public WebSocket + signed Indexer reads + full Cosmos SDK transaction signing (BIP-39 mnemonic → BIP-32 derivation at Cosmos default path m/44'/118'/0'/0/0 → secp256k1 with RFC-6979 deterministic-k → bech32 `dydx1…` address → protobuf TxRaw → REST broadcast to the validator). End-to-end verified on testnet. Implements EasyTrading.Abstractions for cross-DEX strategies.</Description>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>$(PackageTags);dydx;dydx-v4;cosmos;perp;secp256k1</PackageTags>
 

@@ -8,8 +8,9 @@ namespace EasyTrading.Dydx.Modules;
 
 /// <summary>
 /// dYdX implementation of <see cref="IStreams"/>. Public market streams (trades / orderbook /
-/// candles) work over the Indexer WebSocket. User-scoped streams (MyOrders / MyFills / etc.)
-/// require a signed Cosmos transaction context and land in Phase 7.2.
+/// candles) work over the Indexer WebSocket. User-scoped streams (MyOrders / MyFills /
+/// MyFundings) subscribe to the <c>v4_subaccounts</c> channel and require a populated
+/// <see cref="DydxCredentials"/> on the client.
 /// </summary>
 internal sealed class Streams(WebSocketClient ws, DydxClientOptions options) : IStreams
 {

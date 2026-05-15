@@ -88,7 +88,9 @@ internal sealed class Orders(
         {
             OrderType.Limit  => PlaceLimitAsync(request.Symbol, request.Side, request.Price ?? 0m, request.Size, request.TimeInForce, request.ReduceOnly, request.ClientOrderId, ct),
             OrderType.Market => PlaceMarketAsync(request.Symbol, request.Side, request.Size, request.ReduceOnly, request.ClientOrderId, ct),
-            _ => throw new InvalidOrderException($"Order type '{request.OrderType}' is not currently supported on dYdX v4. Use Limit, Market, or call /fapi/v3/order via Phase 7.2.1 (planned)."),
+            _ => throw new InvalidOrderException(
+                $"Order type '{request.OrderType}' is not currently supported on dYdX v4 through EasyTrading.Dydx. "
+              + "Use Limit; Market emulation and conditional / stop orders are on the follow-up roadmap."),
         };
 
     public async Task<PlaceOrderResult> PlaceLimitAsync(
@@ -127,13 +129,15 @@ internal sealed class Orders(
         // The Indexer's /perpetualMarkets oracle price gives us a reasonable mid; we apply 5%
         // slippage in the order's favour. Same convention HL/Aster use.
         => Task.FromException<PlaceOrderResult>(new NotImplementedException(
-            "PlaceMarketAsync pending Phase 7.2.1 — needs MarketsCache extension for live oracle price + slippage helper."));
+            "PlaceMarketAsync on dYdX v4 emulates market orders via IOC + an aggressive limit (HL / Aster do the same). "
+          + "This is on the follow-up roadmap; for now place a limit at the live mid +/- a slippage buffer manually."));
 
     public Task<PlaceOrderResult> PlaceStopAsync(
         string symbol, OrderSide side, decimal triggerPrice, decimal size,
         bool isMarket = true, bool reduceOnly = true, CancellationToken ct = default)
         => Task.FromException<PlaceOrderResult>(new NotImplementedException(
-            "Conditional orders pending Phase 7.2.1 — needs CONDITIONAL order_flags wiring."));
+            "Conditional / stop orders on dYdX v4 require the CONDITIONAL order_flags path. Wiring is on the "
+          + "follow-up roadmap — use the dYdX UI for conditional orders until it ships."));
 
     public Task<BatchOrderResult> PlaceBatchAsync(IReadOnlyList<OrderRequest> requests, CancellationToken ct = default)
         => Task.FromException<BatchOrderResult>(new NotSupportedException(
@@ -204,7 +208,9 @@ internal sealed class Orders(
 
     public Task<int> CancelAllAsync(string? symbol = null, CancellationToken ct = default)
         => Task.FromException<int>(new NotImplementedException(
-            "CancelAllAsync pending Phase 7.2.1 — needs to enumerate open orders + issue one cancel per."));
+            "CancelAllAsync isn't wired into EasyTrading.Dydx yet — dYdX v4 has no atomic 'cancel-all' "
+          + "primitive, so the implementation needs to enumerate open orders via Orders.GetOpenAsync and "
+          + "issue one CancelByClientIdAsync per. On the follow-up roadmap."));
 
     public Task ScheduleCancelAsync(DateTimeOffset? at, CancellationToken ct = default)
         => Task.FromException(new NotSupportedException("dYdX v4 has no dead-man switch / scheduled cancel."));
@@ -266,7 +272,7 @@ internal sealed class Orders(
         // dYdX deprecated their dedicated FILL_OR_KILL enum value; IOC is the closest
         // remaining semantics (fill what you can, cancel the rest). Callers that need a
         // strict all-or-nothing fill should use SHORT_TERM with explicit fill_or_kill flags
-        // via the Phase 7.2.1 extension once it lands.
+        // strict all-or-nothing fill via SHORT_TERM order_flags is on the follow-up roadmap.
         TimeInForce.Fok => ProtoOrder.Types.TimeInForce.Ioc,
         TimeInForce.Alo => ProtoOrder.Types.TimeInForce.PostOnly,
         _               => ProtoOrder.Types.TimeInForce.Unspecified,  // GTC == default for LONG_TERM

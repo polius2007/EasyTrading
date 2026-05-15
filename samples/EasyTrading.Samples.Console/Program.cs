@@ -6,7 +6,7 @@ using EasyTrading.HyperLiquid;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-// ─── EasyTrading sample (1.1.1) ──────────────────────────────────────────────
+// ─── EasyTrading sample (1.2.0) ──────────────────────────────────────────────
 //
 // One process registering three DEX clients side-by-side: HyperLiquid, Aster,
 // dYdX v4. Every venue lives behind the same `IExchangeClient`-shaped surface

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <PackageId>EasyTrading.Aster</PackageId>
-    <Description>Aster (asterdex.com) perpetual DEX client for .NET — REST V3 and WebSocket with EIP-712 signing. Implements EasyTrading.Abstractions for cross-DEX strategies.</Description>
+    <Description>Aster Finance (asterdex.com) perpetual DEX client for .NET — REST V3 + Binance-style WebSocket (multiplex market data + listenKey-bound user streams with 30-min keepalive), EIP-712 signing under the AsterSignTransaction domain, pre-flight order validation against /fapi/v3/exchangeInfo filters (PRICE_FILTER / LOT_SIZE / MIN_NOTIONAL), REST retry policy with backoff + jitter. Implements EasyTrading.Abstractions for cross-DEX strategies.</Description>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>$(PackageTags);aster;asterdex;eip712;perp;binance-style</PackageTags>
   </PropertyGroup>
