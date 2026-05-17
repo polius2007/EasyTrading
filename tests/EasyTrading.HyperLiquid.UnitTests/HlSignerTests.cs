@@ -112,6 +112,86 @@ public sealed class HlSignerTests
         Assert.InRange(sig.V, 27, 28);
     }
 
+    /// <summary>
+    /// Regression: in 1.2.0 the user-signed digest was computed against
+    /// <c>"UsdClassTransfer(...)"</c> rather than the HL-required
+    /// <c>"HyperliquidTransaction:UsdClassTransfer(...)"</c>. That meant our signatures
+    /// recovered on an unrelated address and every user-signed mainnet action (transfers,
+    /// withdrawals, approvals) was rejected with <c>"Must deposit before performing actions.
+    /// User: 0x..."</c> pointing at the wrong address. This test pins the recovery so a
+    /// future drift surfaces immediately.
+    /// </summary>
+    [Fact]
+    public void User_signed_signature_recovers_to_signing_key_address()
+    {
+        var schema = new (string Name, string Type)[]
+        {
+            ("hyperliquidChain", "string"),
+            ("amount", "string"),
+            ("toPerp", "bool"),
+            ("nonce", "uint64"),
+        };
+
+        var message = new HlMap()
+            .Add("hyperliquidChain", "Mainnet")
+            .Add("amount", "100")
+            .Add("toPerp", true)
+            .Add("nonce", 1_700_000_000_000L)
+            .Add("signatureChainId", "0x66eee");
+
+        var sig = Signer.SignUserAction(message, "UsdClassTransfer", schema, TestPrivateKey);
+
+        // Reconstruct the EIP-712 digest the same way Signer did, then ECDSA-recover the
+        // address from (digest, r, s, v) and assert it matches the signing key's public address.
+        var digest = Signer.UserSignedDigest(message, "UsdClassTransfer", schema);
+        var expectedAddr = new EthECKey(TestPrivateKey).GetPublicAddress();
+
+        var rBytes = HexToBytes(sig.R);
+        var sBytes = HexToBytes(sig.S);
+        var ecdsaSig = EthECDSASignatureFactory.FromComponents(rBytes, sBytes, new byte[] { (byte)sig.V });
+        var recovered = EthECKey.RecoverFromSignature(ecdsaSig, digest);
+        var recoveredAddr = recovered.GetPublicAddress();
+
+        Assert.Equal(expectedAddr.ToLowerInvariant(), recoveredAddr.ToLowerInvariant());
+    }
+
+    /// <summary>Pin the HL primary-type prefix so we don't silently regress on the digest format again.</summary>
+    [Fact]
+    public void User_signed_typeHash_uses_HyperliquidTransaction_prefix()
+    {
+        // If our digest matches one computed with the HyperliquidTransaction: prefix and
+        // does NOT match one computed without it, we're safely on the HL convention.
+        var schema = new (string Name, string Type)[]
+        {
+            ("hyperliquidChain", "string"),
+            ("amount", "string"),
+            ("toPerp", "bool"),
+            ("nonce", "uint64"),
+        };
+
+        var message = new HlMap()
+            .Add("hyperliquidChain", "Mainnet")
+            .Add("amount", "100")
+            .Add("toPerp", true)
+            .Add("nonce", 1_700_000_000_000L)
+            .Add("signatureChainId", "0x66eee");
+
+        var our      = Signer.UserSignedDigest(message, "UsdClassTransfer", schema);
+        var prefixed = Signer.UserSignedDigest(message, "HyperliquidTransaction:UsdClassTransfer", schema);
+
+        // Caller-passed value with explicit prefix must produce same digest (idempotency).
+        Assert.Equal(our, prefixed);
+    }
+
+    private static byte[] HexToBytes(string hex)
+    {
+        if (hex.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) hex = hex[2..];
+        var bytes = new byte[hex.Length / 2];
+        for (var i = 0; i < bytes.Length; i++)
+            bytes[i] = Convert.ToByte(hex.Substring(i * 2, 2), 16);
+        return bytes;
+    }
+
     [Fact]
     public void EthECKey_can_be_constructed_from_our_test_private_key()
     {

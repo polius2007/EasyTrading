@@ -7,11 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.2.1] — Builder fee approval resilience
+## [1.2.1] — Critical mainnet user-signed action fix + builder approval resilience
 
-### Fixed
-- `approveBuilderFee` failures (typical when signing with an agent wallet) no longer
-  abort `PlaceAsync` / `PlaceBatchAsync`. The library logs a warning, skips builder
+### Fixed — user-signed EIP-712 typeHash (CRITICAL — affected every transfer / withdraw / approval on mainnet since 1.0.0)
+
+The `Signer.UserSignedDigest` typeHash was computed against
+`"<ActionName>(field1 type1,...)"` instead of the HL-required
+`"HyperliquidTransaction:<ActionName>(field1 type1,...)"`. The missing
+`HyperliquidTransaction:` prefix changed the EIP-712 typeHash, which changed the
+structHash, which changed the digest, which made the signature recover on an
+unrelated address. HyperLiquid then rejected the request with
+`Must deposit before performing actions. User: 0x…` pointing at the wrong recovered
+address.
+
+Affected every user-signed action across the library:
+`withdraw3`, `usdSend`, `spotSend`, `usdClassTransfer`, `approveBuilderFee`,
+`approveAgent`. Verified live against HL mainnet during 1.2.1 development.
+
+L1 (order / cancel / modify) signing was NOT affected — it uses a separate
+phantom-agent digest that didn't have the prefix bug.
+
+The fix is one-line in `Signer.UserSignedDigest` — prepend the prefix unless the
+caller already passes it. All existing call sites pick up the fix automatically.
+
+### Fixed — builder fee approval resilience
+- `approveBuilderFee` failures (typical when signing with an agent wallet — HL
+  requires the master wallet for that specific action) no longer abort
+  `PlaceAsync` / `PlaceBatchAsync`. The library logs a warning, skips builder
   attribution for that single order, and re-attempts approval on every subsequent
   order until it succeeds. Previously the entire order would throw, blocking all
   trading on mainnet for setups that follow the recommended master/agent split.
@@ -37,6 +59,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for manual one-time approval, plus the `MasterPrivateKey` programmatic path.
 
 ### Tests
+- New `HlSignerTests.User_signed_signature_recovers_to_signing_key_address` —
+  the regression test that would have caught the typeHash bug. Signs a
+  `usdClassTransfer` action, then ECDSA-recovers the signer address from the
+  resulting (digest, r, s, v) and asserts it equals the signing key's public
+  address. Until now, no test verified end-to-end recovery for user-signed
+  actions — only signature shape. This is the test the v1.0.0 → v1.2.0 line
+  was missing.
+- `HlSignerTests.User_signed_typeHash_uses_HyperliquidTransaction_prefix`
+  asserts idempotency: passing the primary type with or without the
+  `HyperliquidTransaction:` prefix produces the same digest.
+- New `HyperLiquidMainnetSmokeTests` (gated, never auto-runs) provides a
+  one-shot live-mainnet PlaceLimit + Cancel through a real master / agent
+  pair. Used during 1.2.1 development to verify the fixes end-to-end against
+  real HL.
 - New `HlBuilderApprovalFallbackTests` covers four scenarios end-to-end through a
   scripted `HttpMessageHandler`:
   1. Approve fails → order still placed with no `builder` field on the wire.

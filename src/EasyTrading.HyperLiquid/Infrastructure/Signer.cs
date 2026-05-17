@@ -145,7 +145,21 @@ internal static class Signer
         return Sign(digest, privateKeyHex);
     }
 
-    private static byte[] UserSignedDigest(
+    /// <summary>
+    /// HyperLiquid's EIP-712 primary-type convention. Every user-signed action's typeHash is
+    /// computed over the string <c>"HyperliquidTransaction:&lt;ActionName&gt;(field1 type1,...)"</c>
+    /// rather than just <c>"&lt;ActionName&gt;(...)"</c>. The Python / Rust reference SDKs do the
+    /// same. Without this prefix the signature recovers on an unrelated address and HL rejects
+    /// the request — typically with <c>Must deposit before performing actions. User: 0x…</c>
+    /// pointing at the wrong recovered address.
+    /// </summary>
+    private const string UserSignedPrimaryTypePrefix = "HyperliquidTransaction:";
+
+    /// <summary>
+    /// Exposed as <c>internal</c> for tests that need to compute the digest separately to
+    /// verify recovery. Not part of the public surface.
+    /// </summary>
+    internal static byte[] UserSignedDigest(
         HlMap message,
         string primaryType,
         IReadOnlyList<(string Name, string Type)> typeSchema)
@@ -164,8 +178,13 @@ internal static class Signer
             Uint256(chainId),
             ZeroAddressPadded));
 
-        // typeHash from the schema: "PrimaryType(type1 name1,type2 name2,...)"
-        var typeString = primaryType + "("
+        // typeHash from the schema:
+        //   "HyperliquidTransaction:PrimaryType(type1 name1,type2 name2,...)"
+        // The HyperliquidTransaction prefix is mandatory — see UserSignedPrimaryTypePrefix.
+        var prefixedType = primaryType.StartsWith(UserSignedPrimaryTypePrefix, StringComparison.Ordinal)
+            ? primaryType
+            : UserSignedPrimaryTypePrefix + primaryType;
+        var typeString = prefixedType + "("
             + string.Join(",", typeSchema.Select(f => $"{f.Type} {f.Name}"))
             + ")";
         var typeHash = Keccak.CalculateHash(Encoding.UTF8.GetBytes(typeString));
