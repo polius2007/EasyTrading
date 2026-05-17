@@ -29,9 +29,9 @@ This site is the **API reference**, auto-generated from XML doc-comments on ever
 
 ## Status
 
-**HyperLiquid `1.2.0`** + **Aster `1.2.0`** — both feature-complete and on NuGet (REST + WebSocket + EIP-712 signing on each, with pre-flight validation, REST retry policy, and gap recovery on user streams).
+**HyperLiquid `1.2.3`** + **Aster `1.2.3`** — both feature-complete and on NuGet (REST + WebSocket + EIP-712 signing on each, with pre-flight validation, REST retry policy, and gap recovery on user streams).
 
-**dYdX v4 `1.2.0`** — stable on NuGet. Indexer REST + public WebSocket + signed reads + full Cosmos SDK transaction signing (BIP-39 → BIP-32 → secp256k1 → bech32 → protobuf `TxRaw` → REST broadcast), end-to-end verified on testnet (PlaceLimit + Cancel from a faucet-funded wallet, chain accepts both).
+**dYdX v4 `1.2.3`** — stable on NuGet. Indexer REST + public WebSocket + signed reads + full Cosmos SDK transaction signing (BIP-39 → BIP-32 → secp256k1 → bech32 → protobuf `TxRaw` → REST broadcast), end-to-end verified on testnet (PlaceLimit + Cancel from a faucet-funded wallet, chain accepts both).
 
 ## License
 

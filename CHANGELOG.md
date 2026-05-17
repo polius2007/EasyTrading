@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.3] — Signature-recovery regression suite + audit-pass docs refresh
+
+No library code changes. This release pins everything that 1.2.1 / 1.2.2 fixed
+and refreshes the docs to reflect the live-mainnet audit.
+
+### Tests
+- New `HlSignatureRecoveryRegressionTests` (21 facts) — for every signed action
+  the library can produce, sign it with a known private key, then ECDSA-recover
+  the signer address from the resulting `(digest, r, s, v)` and assert it
+  equals the signing key's public address. This is the exact firewall that
+  would have caught the 1.2.1 user-signed prefix bug and the 1.2.2 trigger
+  field-order bug. Covers:
+  - L1 actions: `order` (Limit GTC, with clientOrderId, with vaultAddress, with
+    expiresAfter), Stop-Market / Stop-Limit / Take-Profit trigger orders,
+    `cancel`, `cancelByCloid`, `modify`, `batchModify`, `scheduleCancel`,
+    `updateLeverage`.
+  - User-signed actions: `usdClassTransfer`, `usdSend`, `spotSend`, `withdraw3`,
+    `approveAgent`, `approveBuilderFee`.
+
+### Docs
+- All status-line version references bumped 1.2.0 → 1.2.3 across `README`,
+  `AGENTS`, `CLAUDE`, `copilot-instructions`, cursor rules, `llms.txt`,
+  `docs/index`.
+- README + AGENTS now record the live mainnet audit result and the recovery
+  regression suite explicitly, so prospective users see both the verification
+  story and the bug-class firewall.
+
 ## [1.2.2] — Trigger orders, modify response, sub-accounts null (live-audit fixes)
 
 Three more HL mainnet bugs surfaced by a comprehensive live audit run that
