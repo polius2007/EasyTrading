@@ -67,7 +67,7 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
         _ws = new WebSocketClient(_options, _logger);
 
         Markets   = new Markets(info);
-        Orders    = new Orders(info, exchange, _metaCache, _options);
+        Orders    = new Orders(info, exchange, _metaCache, _options, _logger);
         Positions = new Positions(info, exchange, _metaCache, _options);
         Trades    = new Trades(info, _options);
         Account   = new Account(info, exchange, _options);

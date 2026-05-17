@@ -168,6 +168,20 @@ This software is provided "as is", without warranty of any kind. Trading derivat
 
 The HyperLiquid client attaches a 0.5 bps (0.005%) builder fee to every order by default — this funds continued development. The fee is well below typical taker rates and visible on-chain as a separate field on each order action. The library calls `approveBuilderFee` once per account on the first order; nothing else is required from the consumer. To route fees to your own address set `HyperLiquidClientOptions.BuilderFee`; to opt out entirely, set its `FeeRate` to `0m`.
 
+> **Note on agent wallets and builder approval.** HyperLiquid requires `approveBuilderFee`
+> to be signed by the master wallet, not an agent wallet. If you initialise the client with
+> an agent key (the recommended production setup), you have two options:
+>
+> 1. **Manual one-time approval** (simplest): visit
+>    [`app.hyperliquid.xyz/builderCodes`](https://app.hyperliquid.xyz/builderCodes), connect
+>    your master wallet, and approve the EasyTrading builder address with at least the
+>    default 0.5 bps rate. Subsequent orders will pick up the approval automatically.
+> 2. **Pass `MasterPrivateKey` in credentials** for the first run only, then remove it once
+>    approval has been recorded on-chain.
+>
+> Until approval is in place, orders are placed without builder routing (a warning is logged);
+> placement itself is not blocked.
+
 ## License
 
 [MIT](LICENSE) © 2026 Elinesoft

@@ -4,6 +4,7 @@ using System.Text.Json;
 using EasyTrading.Abstractions;
 using EasyTrading.Abstractions.Models;
 using EasyTrading.HyperLiquid.Infrastructure;
+using Microsoft.Extensions.Logging;
 
 namespace EasyTrading.HyperLiquid.Modules;
 
@@ -12,7 +13,8 @@ internal sealed class Orders(
     InfoClient info,
     ExchangeClient exchange,
     MetaCache meta,
-    HyperLiquidClientOptions options) : IOrders
+    HyperLiquidClientOptions options,
+    ILogger? logger = null) : IOrders
 {
     // In-memory cache: which (user, builder) pairs have already been approved this process.
     // Avoids a per-order maxBuilderFee round-trip after the first.
@@ -471,23 +473,35 @@ internal sealed class Orders(
         var wireFee = (int)Math.Round(fee.FeeRate * 100_000m, MidpointRounding.ToEven);
         if (wireFee <= 0) return;
 
-        // Make sure the user has approved this builder once. Cached in-process; first call may
-        // send an approveBuilderFee transaction transparently.
-        await EnsureBuilderApprovedAsync(fee, wireFee, ct).ConfigureAwait(false);
+        // Make sure the user has approved this builder once. Cached in-process per (user, builder);
+        // the first call may transparently send an approveBuilderFee transaction. If that approval
+        // fails (typical when the configured PrivateKey is an agent wallet on mainnet — HyperLiquid
+        // requires approveBuilderFee to be signed by the master wallet), the order proceeds without
+        // builder attribution rather than failing outright. A warning is logged with guidance.
+        var approved = await EnsureBuilderApprovedAsync(fee, wireFee, ct).ConfigureAwait(false);
+        if (!approved)
+            return; // skip the builder field — order still goes through, just unattributed.
 
         action.Add("builder", new HlMap()
             .Add("b", fee.BuilderAddress.ToLowerInvariant())
             .Add("f", wireFee));
     }
 
-    private async Task EnsureBuilderApprovedAsync(BuilderFee fee, int requiredWireFee, CancellationToken ct)
+    /// <summary>
+    /// Ensure this (user, builder) pair has at least <paramref name="requiredWireFee"/> approved.
+    /// Returns <c>true</c> if approved (either previously or by this call); <c>false</c> if the
+    /// approval transaction failed, in which case the caller should skip builder attribution for
+    /// the current order. Failures are NOT cached — every subsequent order retries the check so
+    /// that a manual UI approval picks up automatically.
+    /// </summary>
+    private async Task<bool> EnsureBuilderApprovedAsync(BuilderFee fee, int requiredWireFee, CancellationToken ct)
     {
         var user = options.Credentials?.MasterAddress;
-        if (user is null) return; // no creds → no signing happens, error surfaces later from exchange
+        if (user is null) return false; // no creds → no signing happens, the order itself will fail later
 
         var cacheKey = $"{user.ToLowerInvariant()}:{fee.BuilderAddress.ToLowerInvariant()}";
         if (_builderApproved.TryGetValue(cacheKey, out var ok) && ok)
-            return;
+            return true;
 
         // maxBuilderFee returns the currently-approved tenths-of-bp ceiling for (user, builder).
         decimal currentMax;
@@ -509,10 +523,13 @@ internal sealed class Orders(
         if ((int)currentMax >= requiredWireFee)
         {
             _builderApproved[cacheKey] = true;
-            return;
+            return true;
         }
 
         // Send a user-signed approveBuilderFee action with the required rate as percent string.
+        // HyperLiquid requires this action to be signed by the master wallet — if the caller has
+        // supplied a separate MasterPrivateKey we use it here; otherwise fall back to the regular
+        // PrivateKey (which only succeeds when it IS the master).
         var nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var maxFeeRatePct = (fee.FeeRate * 100m).ToString("0.######", CultureInfo.InvariantCulture) + "%";
 
@@ -530,8 +547,35 @@ internal sealed class Orders(
             ("nonce",             "uint64"),
         };
 
-        await exchange.SendUserAsync(approve, "ApproveBuilderFee", schema, ct).ConfigureAwait(false);
-        _builderApproved[cacheKey] = true;
+        var creds = options.Credentials!;
+        var approveKey = !string.IsNullOrEmpty(creds.MasterPrivateKey) ? creds.MasterPrivateKey : creds.PrivateKey;
+
+        try
+        {
+            await exchange.SendUserAsyncWithKey(approve, "ApproveBuilderFee", schema, approveKey, ct).ConfigureAwait(false);
+            _builderApproved[cacheKey] = true;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // Most likely cause: the configured PrivateKey is an agent wallet, but HyperLiquid
+            // requires approveBuilderFee to be signed by the master wallet. Either set
+            // HyperLiquidCredentials.MasterPrivateKey for one-time approval, or approve the
+            // builder once manually via https://app.hyperliquid.xyz/builderCodes — after that,
+            // subsequent orders pick up the approval automatically (we re-check maxBuilderFee
+            // every time until cache flips to true).
+            //
+            // We deliberately do NOT cache `false` here — leaving the key absent lets the next
+            // order retry, so a manual UI approval is picked up on the very next call.
+            logger?.LogWarning(ex,
+                "Builder fee approval failed for builder {Builder}. " +
+                "If you are using an agent wallet, approve the builder manually at " +
+                "https://app.hyperliquid.xyz/builderCodes with your master wallet ({Master}), " +
+                "or set HyperLiquidCredentials.MasterPrivateKey for one-time programmatic approval. " +
+                "Orders will be placed without builder routing until approval is in place.",
+                fee.BuilderAddress, user);
+            return false;
+        }
     }
 
     // ─── response parsing ────────────────────────────────────────────────────

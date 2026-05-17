@@ -62,27 +62,48 @@ internal sealed class ExchangeClient
     // ─── User-signed actions: transfers, withdrawals, approvals ────────────────────────────
 
     /// <summary>
-    /// Send a user-signed payload (transfer, withdrawal, approval). <paramref name="action"/>
+    /// Send a user-signed payload (transfer, withdrawal, approval) signed with the credentials'
+    /// regular <see cref="HyperLiquidCredentials.PrivateKey"/>. Equivalent to
+    /// <see cref="SendUserAsyncWithKey"/> with the credentials' private key. <paramref name="action"/>
     /// must contain only the schema-defined fields; <c>hyperliquidChain</c> and
     /// <c>signatureChainId</c> are added here before signing.
     /// </summary>
-    public async Task<JsonElement> SendUserAsync(
+    public Task<JsonElement> SendUserAsync(
         HlMap action,
         string primaryType,
         IReadOnlyList<(string Name, string Type)> typeSchema,
         CancellationToken ct)
+        => SendUserAsyncWithKey(action, primaryType, typeSchema, RequireCredentials().PrivateKey, ct);
+
+    /// <summary>
+    /// Send a user-signed payload signed with an explicit private key, overriding the credentials'
+    /// regular <see cref="HyperLiquidCredentials.PrivateKey"/>. Used for actions HyperLiquid
+    /// requires to be signed by the master wallet (e.g. <c>approveBuilderFee</c>) when the
+    /// regular signing key is an agent wallet. <paramref name="action"/> must contain only the
+    /// schema-defined fields; <c>hyperliquidChain</c> and <c>signatureChainId</c> are added here
+    /// before signing.
+    /// </summary>
+    public async Task<JsonElement> SendUserAsyncWithKey(
+        HlMap action,
+        string primaryType,
+        IReadOnlyList<(string Name, string Type)> typeSchema,
+        string privateKey,
+        CancellationToken ct)
     {
-        var creds = RequireCredentials();
+        ArgumentException.ThrowIfNullOrEmpty(privateKey);
+        // RequireCredentials primarily guards against null Options.Credentials; we still want
+        // the rest of the envelope (e.g. nonce extraction) to follow the usual path.
+        _ = RequireCredentials();
+
         var isMainnet = _options.Network == HyperLiquidNetwork.Mainnet;
 
         // The user-signed flavour requires these two fields, signed as part of the message.
         action.Add("hyperliquidChain", isMainnet ? "Mainnet" : "Testnet");
         action.Add("signatureChainId", "0x66eee");
 
-        var signature = Signer.SignUserAction(action, primaryType, typeSchema, creds.PrivateKey);
+        var signature = Signer.SignUserAction(action, primaryType, typeSchema, privateKey);
 
         // The "nonce" wire field for user-signed actions reuses the action's time/nonce field.
-        // We extract whichever timestamp-shaped field is present (time, nonce, …) for the envelope.
         var envelopeNonce = ExtractEnvelopeNonce(action);
 
         var envelope = new HlMap()

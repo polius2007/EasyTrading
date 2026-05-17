@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] — Builder fee approval resilience
+
+### Fixed
+- `approveBuilderFee` failures (typical when signing with an agent wallet) no longer
+  abort `PlaceAsync` / `PlaceBatchAsync`. The library logs a warning, skips builder
+  attribution for that single order, and re-attempts approval on every subsequent
+  order until it succeeds. Previously the entire order would throw, blocking all
+  trading on mainnet for setups that follow the recommended master/agent split.
+- Approval-failure cache poisoning: a failed approval no longer marks the
+  `(user, builder)` pair as approved — so a manual UI approval is picked up on the
+  very next order.
+
+### Added
+- `HyperLiquidCredentials.MasterPrivateKey` (optional). When supplied, used
+  exclusively for `approveBuilderFee` so that agent-keyed setups can complete the
+  one-time approval without manual UI steps. Falls back to `PrivateKey` when null.
+- `ExchangeClient.SendUserAsyncWithKey` overload that signs a user-action with an
+  explicit private key (rather than the credentials' default). Used internally for
+  the master-key approval path; available to advanced consumers that need the same
+  separation.
+- `Orders` now accepts an optional `ILogger?` (wired automatically by
+  `HyperLiquidClient`) so the approval-failure warning surfaces through whatever
+  logging pipeline the host has configured.
+
+### Docs
+- README clarifies the master-vs-agent requirement for builder approval and links
+  to [`app.hyperliquid.xyz/builderCodes`](https://app.hyperliquid.xyz/builderCodes)
+  for manual one-time approval, plus the `MasterPrivateKey` programmatic path.
+
+### Tests
+- New `HlBuilderApprovalFallbackTests` covers four scenarios end-to-end through a
+  scripted `HttpMessageHandler`:
+  1. Approve fails → order still placed with no `builder` field on the wire.
+  2. Approve fails → `(user, builder)` cache not poisoned (next call re-checks
+     `maxBuilderFee`).
+  3. Approve fails → a warning-level log entry mentions both the master address
+     and the `builderCodes` URL.
+  4. `MasterPrivateKey` supplied → captured approve signature recovers to the
+     master key (verified by re-signing with the candidate key and comparing
+     against the wire `(r, s, v)`, since RFC-6979 makes secp256k1 ECDSA
+     deterministic).
+
 ## [1.2.0] — dYdX v4 goes live on NuGet
 
 Lands the complete Cosmos SDK transaction-signing path for dYdX v4 and ships it.
