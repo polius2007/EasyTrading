@@ -55,7 +55,14 @@ internal sealed class Account(
     public async Task<IReadOnlyList<SubAccount>> GetSubAccountsAsync(CancellationToken ct = default)
     {
         var user = RequireUser();
-        var raw = await info.PostAsync<List<SubAccountRaw>>(new { type = "subAccounts", user }, ct).ConfigureAwait(false);
+        // HL returns the literal JSON `null` (not `[]`) when the address has no sub-accounts;
+        // PostRawAsync + manual deserialize lets us treat that as an empty list cleanly.
+        var body = await info.PostRawAsync(new { type = "subAccounts", user }, ct).ConfigureAwait(false);
+        if (body.ValueKind == System.Text.Json.JsonValueKind.Null)
+            return Array.Empty<SubAccount>();
+        var raw = System.Text.Json.JsonSerializer.Deserialize<List<SubAccountRaw>>(
+                      body.GetRawText(), JsonOptions.Default)
+                  ?? new List<SubAccountRaw>();
         return raw.Select(Mapper.Map).ToList();
     }
 

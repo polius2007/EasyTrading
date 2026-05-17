@@ -180,8 +180,21 @@ internal sealed class Orders(
             .Add("order", newOrderWire);
 
         var response = await exchange.SendL1Async(action, null, ct).ConfigureAwait(false);
-        var status = response.GetProperty("data").GetProperty("statuses")[0];
 
+        // HL's modify response shape varies — sometimes {type:"default"} on bare success,
+        // sometimes {type:"order",data:{statuses:[...]}}. Defensively check both.
+        if (!response.TryGetProperty("data", out var data)
+         || !data.TryGetProperty("statuses", out var statuses)
+         || statuses.ValueKind != System.Text.Json.JsonValueKind.Array
+         || statuses.GetArrayLength() == 0)
+        {
+            // Bare-success "default" envelope: HL acknowledged the modify; original oid is gone,
+            // a new one was issued but isn't surfaced in this shape. Return existing.OrderId so
+            // callers can still track that the modify went through.
+            return new ModifyResult(existing.OrderId, true, null);
+        }
+
+        var status = statuses[0];
         if (status.TryGetProperty("resting", out var resting))
             return new ModifyResult(resting.GetProperty("oid").GetInt64(), true, null);
         if (status.TryGetProperty("error", out var err))
@@ -420,22 +433,27 @@ internal sealed class Orders(
             OrderType.Limit or OrderType.Market =>
                 new HlMap().Add("limit", new HlMap().Add("tif", TifToWire(tif))),
 
+            // Field order in the inner "trigger" dict MUST be {isMarket, triggerPx, tpsl} —
+            // msgpack preserves insertion order, the action hash is computed over msgpack(action),
+            // and HL expects exactly this order (matches hyperliquid-python-sdk). Until 1.2.1 we
+            // had triggerPx first, which made every Stop / TakeProfit signature recover on a
+            // random address and HL rejected with "User or API Wallet 0x… does not exist".
             OrderType.StopMarket =>
                 new HlMap().Add("trigger", new HlMap()
-                    .Add("triggerPx", FloatToWire(triggerPrice ?? 0m))
                     .Add("isMarket", true)
+                    .Add("triggerPx", FloatToWire(triggerPrice ?? 0m))
                     .Add("tpsl", "sl")),
 
             OrderType.StopLimit =>
                 new HlMap().Add("trigger", new HlMap()
-                    .Add("triggerPx", FloatToWire(triggerPrice ?? 0m))
                     .Add("isMarket", false)
+                    .Add("triggerPx", FloatToWire(triggerPrice ?? 0m))
                     .Add("tpsl", "sl")),
 
             OrderType.TakeProfit =>
                 new HlMap().Add("trigger", new HlMap()
-                    .Add("triggerPx", FloatToWire(triggerPrice ?? 0m))
                     .Add("isMarket", true)
+                    .Add("triggerPx", FloatToWire(triggerPrice ?? 0m))
                     .Add("tpsl", "tp")),
 
             _ => throw new InvalidOrderException(

@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] — Trigger orders, modify response, sub-accounts null (live-audit fixes)
+
+Three more HL mainnet bugs surfaced by a comprehensive live audit run that
+exercises every read method, every order type, and every batch / modify /
+cancel variation against a real master / agent account.
+
+### Fixed
+- **Trigger orders (Stop-Market / Stop-Limit / Take-Profit) were broken since
+  1.0.0** — the wire-format for the inner `trigger` dict had its fields in the
+  wrong order (`{triggerPx, isMarket, tpsl}` instead of HL's required
+  `{isMarket, triggerPx, tpsl}`). msgpack preserves insertion order, the action
+  hash is computed over `msgpack(action)`, and HL rejected every trigger order
+  signature with `"User or API Wallet 0x… does not exist"` pointing at the
+  garbled recovered address. Fixed by reordering the fields to match the
+  hyperliquid-python-sdk reference.
+- **`Orders.ModifyAsync` threw `KeyNotFoundException`** when HL responded with
+  the `{type:"default"}` bare-success envelope instead of `{type:"order",data:…}`.
+  Now defensively probes for both shapes and returns a sensible `ModifyResult`
+  in either case.
+- **`Account.GetSubAccountsAsync` threw `ExchangeApiException: null JSON
+  document`** for addresses with no sub-accounts — HL returns the literal JSON
+  `null` instead of `[]`. Now treats `null` as an empty list.
+
+### Tests
+- New `HyperLiquidMainnetFullAuditTests` — comprehensive gated live-mainnet
+  exercise that walks 11 sections: every read method on Markets / Account /
+  Positions / Trades / Orders / Vaults / Staking, every order type
+  (Limit GTC / ALO / IOC / FOK + Stop-Market + Stop-Limit + Take-Profit),
+  Modify, PlaceBatch × 3, ModifyBatch × 2, CancelBatch, CancelByClientId,
+  CancelAll, ScheduleCancel (expected $1M volume gate), and 9 stream
+  subscriptions (5 public + 4 user). All passing on live mainnet against an
+  agent wallet. Skipped unless every required env var is set
+  (`EASYTRADING_LIVE_AUDIT=1` + master / agent key creds).
+
 ## [1.2.1] — Critical mainnet user-signed action fix + builder approval resilience
 
 ### Fixed — user-signed EIP-712 typeHash (CRITICAL — affected every transfer / withdraw / approval on mainnet since 1.0.0)
