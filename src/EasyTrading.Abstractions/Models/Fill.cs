@@ -23,4 +23,14 @@ public sealed record Fill(
     decimal Fee,
     string FeeAsset,
     bool IsMaker,
-    DateTimeOffset Time);
+    DateTimeOffset Time)
+{
+    /// <summary>Position size immediately before this fill, when supplied by the exchange.</summary>
+    public decimal? StartPosition { get; init; }
+
+    /// <summary>Exchange-provided semantic direction, such as Open Long or Close Short.</summary>
+    public string? Direction { get; init; }
+
+    /// <summary>Realized PnL reported for this fill, when supplied by the exchange.</summary>
+    public decimal? ClosedPnl { get; init; }
+}

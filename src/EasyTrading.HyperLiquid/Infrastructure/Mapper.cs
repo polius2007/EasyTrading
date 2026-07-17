@@ -275,7 +275,12 @@ internal static class Mapper
         Fee: f.Fee,
         FeeAsset: f.FeeToken,
         IsMaker: !f.Crossed,
-        Time: T(f.Time));
+        Time: T(f.Time))
+    {
+        StartPosition = f.StartPosition,
+        Direction = f.Dir,
+        ClosedPnl = f.ClosedPnl
+    };
 
     public static TwapSliceFill Map(TwapSliceFillRaw raw)
     {

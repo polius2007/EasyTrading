@@ -152,9 +152,9 @@ public sealed class HlMapperTests
           "sz": "0.1",
           "side": "B",
           "time": 1700000000000,
-          "startPosition": "0",
-          "dir": "Open Long",
-          "closedPnl": "0",
+          "startPosition": "-0.25",
+          "dir": "Close Short",
+          "closedPnl": "1.75",
           "hash": "0xabc",
           "oid": 99,
           "crossed": false,
@@ -176,6 +176,9 @@ public sealed class HlMapperTests
         Assert.Equal(0.05m, fill.Fee);
         Assert.Equal("USDC", fill.FeeAsset);
         Assert.True(fill.IsMaker);   // crossed=false => maker
+        Assert.Equal(-0.25m, fill.StartPosition);
+        Assert.Equal("Close Short", fill.Direction);
+        Assert.Equal(1.75m, fill.ClosedPnl);
     }
 
     [Fact]
