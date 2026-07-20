@@ -15,9 +15,9 @@ A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClie
 
 | Exchange    | Package                              | REST | WebSocket | Signing | Latest                              |
 |-------------|--------------------------------------|:----:|:---------:|:-------:|:-----------------------------------:|
-| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅  |    ✅     |   ✅    | `1.2.3`                             |
-| Aster       | `EasyTrading.Aster`                  |  ✅  |    ✅     |   ✅    | `1.2.3`                             |
-| dYdX v4     | `EasyTrading.Dydx`                   |  ✅  |    ✅     |   ✅    | `1.2.3`                             |
+| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅  |    ✅     |   ✅    | `1.2.4`                             |
+| Aster       | `EasyTrading.Aster`                  |  ✅  |    ✅     |   ✅    | `1.2.4`                             |
+| dYdX v4     | `EasyTrading.Dydx`                   |  ✅  |    ✅     |   ✅    | `1.2.4`                             |
 
 Coverage summary:
 
@@ -44,7 +44,7 @@ tests + a gated live-mainnet audit harness (`HyperLiquidMainnetFullAuditTests`) 
 exercises 58 sub-checks against a real master / agent wallet — every read method, every
 order type (Limit GTC / ALO / IOC / FOK + Stop-Market / Stop-Limit / Take-Profit), Modify,
 batch operations, CancelAll, ScheduleCancel, Vaults / Staking reads, and 9 stream
-channels. All green at 1.2.3.
+channels. All green at 1.2.4.
 
 The 21-fact `HlSignatureRecoveryRegressionTests` suite signs every HL action type with a
 known key and verifies ECDSA recovery returns that key's address — the exact firewall that
@@ -142,9 +142,9 @@ Methods are grouped by entity. Everything about orders is on `Orders`; everythin
 
 ## Roadmap
 
-- [x] HyperLiquid — REST + WebSocket + EIP-712 signing + hardening → `1.2.3`
-- [x] Aster — REST + WebSocket + EIP-712 signing → `1.2.3`
-- [x] dYdX v4 — Indexer REST + WebSocket + Cosmos SDK signing (BIP-39 → BIP-32 → secp256k1 → bech32, full proto stack, REST broadcast), end-to-end verified on testnet → `1.2.3`
+- [x] HyperLiquid — REST + WebSocket + EIP-712 signing + hardening → `1.2.4`
+- [x] Aster — REST + WebSocket + EIP-712 signing → `1.2.4`
+- [x] dYdX v4 — Indexer REST + WebSocket + Cosmos SDK signing (BIP-39 → BIP-32 → secp256k1 → bech32, full proto stack, REST broadcast), end-to-end verified on testnet → `1.2.4`
 
 ## Documentation
 

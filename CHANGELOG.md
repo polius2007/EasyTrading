@@ -7,6 +7,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.4] — Multi-tenant HyperLiquid: shared metadata catalog + pluggable builder-fee approval store + client factory
+
+Additive expansion of the HyperLiquid client surface for applications that host
+multiple credential-isolated clients side-by-side (multi-account bots, hosted
+copy-trading backends, shared strategy runners). Zero breaking changes — existing
+single-client `AddHyperLiquid(o => …)` flow keeps its lazy per-client metadata
+and static in-process approval cache exactly as before.
+
+### Added
+
+- **`HyperLiquidMetadataCatalog` + `IHyperLiquidMetadataCatalog`** — thread-safe
+  singleton catalog of public HyperLiquid metadata (perp `meta` + `spotMeta`).
+  Per-scope cache keyed by `HyperLiquidMetadataScope` (network + optional REST
+  base URL override). `WarmUpAsync` primes the catalog once; `RefreshAsync`
+  forces a re-fetch; `TryGetAsset` / `GetRequiredAsset` return
+  `HyperLiquidAssetMetadata` (name, wire asset id, size decimals, spot flag).
+  Never stores credentials, never reads from a client's HTTP transport unless
+  configured to.
+- **`HyperLiquidBuilderFeeApprovalStore` + `IHyperLiquidBuilderFeeApprovalStore`** —
+  pluggable, thread-safe builder-fee approval state with per-key single-flight
+  refresh (`GetOrRefreshAsync`), synchronous read (`TryGet`), invalidation
+  (`Invalidate`). Coalesces concurrent `maxBuilderFee` checks for the same
+  `(network, restBaseUrl, master, builder)` key across every client using the
+  store. Failed checks / approvals start a 30-minute retry cooldown so orders
+  keep flowing without builder routing until the cooldown expires. Ships an
+  in-memory implementation; the interface is public so consumers can back it
+  with Redis / a database for cross-process persistence.
+- **`HyperLiquidBuilderFeeApprovalKey` + `HyperLiquidBuilderFeeApprovalState`**
+  — public records the store contract uses.
+- **`HyperLiquidClientFactory` + `IHyperLiquidClientFactory`** — factory pattern
+  for per-account client instantiation on top of a shared catalog. Every
+  produced client isolates credentials, HTTP ownership, nonces, WebSocket
+  state, and per-client caches; shares only the catalog and (optionally) the
+  approval store. Overloads accept a caller-supplied `HttpClient` or a
+  per-factory / per-call approval store for group isolation.
+- **`HyperLiquidClient` new constructors** — accept `IHyperLiquidMetadataCatalog`
+  (with or without a supplied `HttpClient`, with or without an
+  `IHyperLiquidBuilderFeeApprovalStore`). Existing constructors continue to
+  create client-local metadata and use the process-static approval cache.
+- **DI parameterless overload:** `services.AddEasyTrading().AddHyperLiquid()`
+  (no lambda) registers `IHyperLiquidMetadataCatalog`,
+  `IHyperLiquidBuilderFeeApprovalStore`, and `IHyperLiquidClientFactory` as
+  singletons and skips registering a default `HyperLiquidClient` — callers
+  create clients through the factory after warming the catalog.
+
+### Changed
+
+- `Orders` now depends on `IAssetMetadataProvider` (new internal abstraction)
+  instead of the concrete `MetaCache`. When a shared catalog is supplied, the
+  Orders module reads the pre-warmed metadata without triggering per-client
+  `meta` / `spotMeta` fetches. When no catalog is supplied, the legacy lazy
+  `MetaCache` behaviour is preserved verbatim.
+- Builder-fee approval flow inside `Orders.EnsureBuilderApprovedAsync` picks
+  between the pluggable store (when supplied) and the existing in-process
+  `ConcurrentDictionary` legacy cache. Same visible behaviour to consumers;
+  only differences are (a) failed refreshes now enter a 30-minute retry
+  cooldown per key when using the store, and (b) concurrent orders across
+  clients no longer duplicate `maxBuilderFee` info calls for the same
+  `(user, builder)` pair.
+
+- `Abstractions.Fill` gains three optional nullable fields (non-breaking): 
+  `StartPosition` (position size immediately before this fill), `Direction`
+  (exchange-provided semantic direction such as "Open Long" / "Close Short"),
+  `ClosedPnl` (realized PnL reported for this fill). Populated by
+  `HyperLiquid.Trades.GetMyFillsAsync` from HL's `userFillsByTime` payload.
+
+### Tests
+
+- `HyperLiquidClientFactoryTests` (254 lines) — covers factory construction,
+  option cloning (credentials get replaced, retry policy is deep-cloned,
+  network / URLs / timeouts / builder fee preserved), catalog sharing across
+  produced clients, override overloads for HttpClient and approval store,
+  argument validation.
+- `HyperLiquidBuilderFeeApprovalStoreTests` (131 lines) — covers single-flight
+  refresh, `IsUsable` gating (approved fee ≥ required OR cooldown active),
+  invalidation, key normalization (case-insensitive, trailing-slash-normalized
+  URL). Concurrency test asserts one refresh call across many parallel readers.
+- `HlBuilderApprovalFallbackTests` extended (+53 lines) to also cover the
+  store-backed refresh path.
+- Total unit tests now **189** (was 174 in 1.2.3): 131 HL + 32 dYdX + 26 Aster.
+  All green on Release build across net8.0 + net9.0.
+
+### Docs
+
+- `docs/getting-started.md` — new "Multiple accounts with shared metadata and
+  fee approval state" section documenting the factory + catalog pattern with
+  code samples.
+- `docs/recipes.md` — note about the parameterless registration and shared
+  approval store cooldown behaviour.
+- Central `Directory.Packages.props` — dependency versions refreshed.
+
 ## [1.2.3] — Signature-recovery regression suite + audit-pass docs refresh
 
 No library code changes. This release pins everything that 1.2.1 / 1.2.2 fixed
