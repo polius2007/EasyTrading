@@ -9,7 +9,7 @@ namespace EasyTrading.HyperLiquid.Modules;
 internal sealed class Positions(
     InfoClient info,
     ExchangeClient exchange,
-    MetaCache meta,
+    IAssetMetadataProvider meta,
     HyperLiquidClientOptions options) : IPositions
 {
     public async Task<IReadOnlyList<Position>> GetAllAsync(CancellationToken ct = default)

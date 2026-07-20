@@ -12,7 +12,7 @@ namespace EasyTrading.HyperLiquid.Modules;
 internal sealed class Orders(
     InfoClient info,
     ExchangeClient exchange,
-    MetaCache meta,
+    IAssetMetadataProvider meta,
     HyperLiquidClientOptions options,
     ILogger? logger = null) : IOrders
 {

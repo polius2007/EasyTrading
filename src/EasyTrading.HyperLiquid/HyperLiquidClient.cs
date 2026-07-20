@@ -29,12 +29,12 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
     private readonly ILogger<HyperLiquidClient> _logger;
     private readonly HttpClient _http;
     private readonly bool _ownsHttp;
-    private readonly MetaCache _metaCache;
+    private readonly MetaCache? _ownedMetadataProvider;
     private readonly WebSocketClient _ws;
 
     /// <summary>Construct a HyperLiquid client with explicit options. Creates an internal <see cref="HttpClient"/>.</summary>
     public HyperLiquidClient(HyperLiquidClientOptions options, ILogger<HyperLiquidClient>? logger = null)
-        : this(CreateHttpClient(options), options, ownsHttp: true, logger)
+        : this(CreateHttpClient(options), options, ownsHttp: true, metadataCatalog: null, logger)
     {
     }
 
@@ -46,11 +46,41 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
 
     /// <summary>Construct with a caller-supplied <see cref="HttpClient"/>. The supplied client is not disposed.</summary>
     public HyperLiquidClient(HttpClient httpClient, HyperLiquidClientOptions options, ILogger<HyperLiquidClient>? logger = null)
-        : this(httpClient, options, ownsHttp: false, logger)
+        : this(httpClient, options, ownsHttp: false, metadataCatalog: null, logger)
     {
     }
 
-    private HyperLiquidClient(HttpClient http, HyperLiquidClientOptions options, bool ownsHttp, ILogger<HyperLiquidClient>? logger)
+    /// <summary>
+    /// Constructs a client with an internally owned HTTP transport and a shared, preloaded
+    /// metadata catalog.
+    /// </summary>
+    public HyperLiquidClient(
+        IHyperLiquidMetadataCatalog metadataCatalog,
+        HyperLiquidClientOptions options,
+        ILogger<HyperLiquidClient>? logger = null)
+        : this(CreateHttpClient(options), options, ownsHttp: true, metadataCatalog, logger)
+    {
+    }
+
+    /// <summary>
+    /// Constructs a client with a caller-owned HTTP transport and a shared, preloaded metadata
+    /// catalog.
+    /// </summary>
+    public HyperLiquidClient(
+        HttpClient httpClient,
+        IHyperLiquidMetadataCatalog metadataCatalog,
+        HyperLiquidClientOptions options,
+        ILogger<HyperLiquidClient>? logger = null)
+        : this(httpClient, options, ownsHttp: false, metadataCatalog, logger)
+    {
+    }
+
+    private HyperLiquidClient(
+        HttpClient http,
+        HyperLiquidClientOptions options,
+        bool ownsHttp,
+        IHyperLiquidMetadataCatalog? metadataCatalog,
+        ILogger<HyperLiquidClient>? logger)
     {
         ArgumentNullException.ThrowIfNull(http);
         ArgumentNullException.ThrowIfNull(options);
@@ -63,12 +93,25 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
         var info = new InfoClient(_http, _options);
         var nonce = new Nonce();
         var exchange = new ExchangeClient(_http, _options, nonce);
-        _metaCache = new MetaCache(info);
+        IAssetMetadataProvider metadataProvider;
+        if (metadataCatalog is null)
+        {
+            var localMetadataCache = new MetaCache(info);
+            metadataProvider = localMetadataCache;
+            _ownedMetadataProvider = localMetadataCache;
+        }
+        else
+        {
+            metadataProvider = new CatalogMetadataProvider(
+                metadataCatalog,
+                HyperLiquidMetadataScope.FromOptions(options));
+        }
+
         _ws = new WebSocketClient(_options, _logger);
 
         Markets   = new Markets(info);
-        Orders    = new Orders(info, exchange, _metaCache, _options, _logger);
-        Positions = new Positions(info, exchange, _metaCache, _options);
+        Orders    = new Orders(info, exchange, metadataProvider, _options, _logger);
+        Positions = new Positions(info, exchange, metadataProvider, _options);
         Trades    = new Trades(info, _options);
         Account   = new Account(info, exchange, _options);
         Transfers = new Transfers(exchange, _options);
@@ -125,7 +168,7 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
     public async ValueTask DisposeAsync()
     {
         await _ws.DisposeAsync().ConfigureAwait(false);
-        _metaCache.Dispose();
+        _ownedMetadataProvider?.Dispose();
         if (_ownsHttp)
             _http.Dispose();
     }

@@ -8,6 +8,26 @@ namespace EasyTrading.HyperLiquid;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
+    /// Registers the shared public metadata catalog and a factory for applications that create
+    /// multiple credential-isolated HyperLiquid clients.
+    /// </summary>
+    /// <remarks>
+    /// This overload does not register a default <see cref="HyperLiquidClient"/>. Callers explicitly
+    /// create clients through <see cref="IHyperLiquidClientFactory"/> after warming the catalog.
+    /// </remarks>
+    /// <param name="builder">The EasyTrading builder.</param>
+    /// <returns>The builder, for chaining further venue registrations.</returns>
+    public static IEasyTradingBuilder AddHyperLiquid(this IEasyTradingBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.Services.TryAddSingleton<IHyperLiquidMetadataCatalog, HyperLiquidMetadataCatalog>();
+        builder.Services.TryAddSingleton<IHyperLiquidClientFactory, HyperLiquidClientFactory>();
+
+        return builder;
+    }
+
+    /// <summary>
     /// Registers a <see cref="HyperLiquidClient"/> with the configured options. Chain after
     /// <c>services.AddEasyTrading()</c>.
     /// </summary>

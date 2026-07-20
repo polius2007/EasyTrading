@@ -86,6 +86,42 @@ options.Credentials = new HyperLiquidCredentials(
 
 `masterAddress` is the wallet whose positions and balances the bot trades against; the agent key signs the actions.
 
+### Multiple accounts with shared metadata
+
+Use the parameterless registration when one application creates a separate client for each account:
+
+```csharp
+builder.Services
+    .AddEasyTrading()
+    .AddHyperLiquid();
+
+using var app = builder.Build();
+
+var scope = new HyperLiquidMetadataScope(HyperLiquidNetwork.Mainnet);
+var catalog = app.Services.GetRequiredService<IHyperLiquidMetadataCatalog>();
+await catalog.WarmUpAsync(scope);
+
+var factory = app.Services.GetRequiredService<IHyperLiquidClientFactory>();
+await using var accountClient = factory.Create(
+    new HyperLiquidCredentials(
+        masterAddress: "0xYourMasterAddress",
+        privateKey: Environment.GetEnvironmentVariable("HL_AGENT_KEY")!,
+        agentName: "my-bot"),
+    new HyperLiquidClientOptions
+    {
+        Network = HyperLiquidNetwork.Mainnet,
+    });
+```
+
+This mode registers one thread-safe metadata catalog and one client factory. It does not register
+a default `HyperLiquidClient` or `IHyperLiquidExchange`. Call `WarmUpAsync` once per network or
+custom REST endpoint before trading. Factory-created clients share only public asset metadata;
+credentials, HTTP ownership, nonces, and WebSocket state remain isolated per client. Their trading
+methods read the prepared catalog and do not fetch `meta` or `spotMeta` implicitly.
+
+The configured `AddHyperLiquid(options => ...)` overload remains the simpler choice for a
+single account and keeps its existing lazy, client-local metadata cache.
+
 ## 4. First trade — start on testnet
 
 Set `Network = HyperLiquidNetwork.Testnet`. Pull testnet USDC from the [HyperLiquid testnet faucet](https://app.hyperliquid-testnet.xyz). Then:

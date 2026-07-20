@@ -15,7 +15,7 @@ namespace EasyTrading.HyperLiquid.Infrastructure;
 /// </list>
 /// We fetch both universes once on first use and cache them for the lifetime of the client.
 /// </remarks>
-internal sealed class MetaCache(InfoClient info) : IDisposable
+internal sealed class MetaCache(InfoClient info) : IAssetMetadataProvider, IDisposable
 {
     private readonly SemaphoreSlim _lock = new(1, 1);
 
