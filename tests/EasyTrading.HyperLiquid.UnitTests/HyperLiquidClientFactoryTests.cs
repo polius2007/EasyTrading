@@ -74,6 +74,24 @@ public sealed class HyperLiquidClientFactoryTests
     }
 
     [Fact]
+    public async Task Catalog_treats_default_and_explicit_official_url_as_one_scope()
+    {
+        var handler = new MetadataHandler();
+        using var catalog = new HyperLiquidMetadataCatalog(new HttpClient(handler));
+        var implicitScope = new HyperLiquidMetadataScope(HyperLiquidNetwork.Mainnet);
+        var explicitScope = new HyperLiquidMetadataScope(
+            HyperLiquidNetwork.Mainnet,
+            new Uri("https://api.hyperliquid.xyz"));
+
+        await catalog.WarmUpAsync(implicitScope);
+        await catalog.WarmUpAsync(explicitScope);
+
+        Assert.True(catalog.TryGetAsset(explicitScope, "BTC", out _));
+        Assert.Equal(1, handler.MetaRequests);
+        Assert.Equal(1, handler.SpotMetaRequests);
+    }
+
+    [Fact]
     public async Task Factory_client_fails_before_http_when_catalog_is_not_warmed()
     {
         var handler = new CountingHandler();

@@ -1,4 +1,5 @@
 using EasyTrading.Abstractions.Models;
+using EasyTrading.HyperLiquid.Infrastructure;
 
 namespace EasyTrading.HyperLiquid;
 
@@ -40,12 +41,8 @@ public sealed class HyperLiquidClientOptions
 
     /// <summary>Resolves to the effective REST base URL based on <see cref="Network"/> and <see cref="RestBaseUrl"/>.</summary>
     /// <returns>The REST base URL.</returns>
-    public Uri GetEffectiveRestBaseUrl() => RestBaseUrl ?? Network switch
-    {
-        HyperLiquidNetwork.Mainnet => new Uri("https://api.hyperliquid.xyz"),
-        HyperLiquidNetwork.Testnet => new Uri("https://api.hyperliquid-testnet.xyz"),
-        _ => throw new ArgumentOutOfRangeException(nameof(Network), Network, "Unknown HyperLiquid network."),
-    };
+    public Uri GetEffectiveRestBaseUrl()
+        => RestBaseUrl ?? HyperLiquidEndpoints.GetRestBaseUrl(Network);
 
     /// <summary>Resolves to the effective WebSocket URL based on <see cref="Network"/> and <see cref="WebSocketUrl"/>.</summary>
     /// <returns>The WebSocket URL.</returns>

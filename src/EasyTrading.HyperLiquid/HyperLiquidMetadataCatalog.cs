@@ -35,11 +35,11 @@ public sealed class HyperLiquidMetadataCatalog : IHyperLiquidMetadataCatalog, ID
 
     /// <inheritdoc />
     public Task WarmUpAsync(HyperLiquidMetadataScope scope, CancellationToken ct = default)
-        => LoadAsync(scope, forceRefresh: false, ct);
+        => LoadAsync(NormalizeScope(scope), forceRefresh: false, ct);
 
     /// <inheritdoc />
     public Task RefreshAsync(HyperLiquidMetadataScope scope, CancellationToken ct = default)
-        => LoadAsync(scope, forceRefresh: true, ct);
+        => LoadAsync(NormalizeScope(scope), forceRefresh: true, ct);
 
     /// <inheritdoc />
     public bool TryGetAsset(
@@ -47,8 +47,8 @@ public sealed class HyperLiquidMetadataCatalog : IHyperLiquidMetadataCatalog, ID
         string symbol,
         out HyperLiquidAssetMetadata metadata)
     {
-        ArgumentNullException.ThrowIfNull(scope);
         ArgumentException.ThrowIfNullOrWhiteSpace(symbol);
+        scope = NormalizeScope(scope);
 
         if (_states.TryGetValue(scope, out var state)
             && state.Snapshot is { } snapshot
@@ -67,6 +67,8 @@ public sealed class HyperLiquidMetadataCatalog : IHyperLiquidMetadataCatalog, ID
         HyperLiquidMetadataScope scope,
         string symbol)
     {
+        scope = NormalizeScope(scope);
+
         if (TryGetAsset(scope, symbol, out var metadata))
             return metadata;
 
@@ -126,6 +128,12 @@ public sealed class HyperLiquidMetadataCatalog : IHyperLiquidMetadataCatalog, ID
         {
             state.Gate.Release();
         }
+    }
+
+    private static HyperLiquidMetadataScope NormalizeScope(HyperLiquidMetadataScope scope)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        return new HyperLiquidMetadataScope(scope.Network, scope.GetEffectiveRestBaseUrl());
     }
 
     private static MetadataSnapshot BuildSnapshot(
