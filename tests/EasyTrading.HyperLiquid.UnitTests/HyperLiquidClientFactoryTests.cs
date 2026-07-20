@@ -27,6 +27,9 @@ public sealed class HyperLiquidClientFactoryTests
         Assert.Same(
             provider.GetRequiredService<IHyperLiquidClientFactory>(),
             provider.GetRequiredService<IHyperLiquidClientFactory>());
+        Assert.Same(
+            provider.GetRequiredService<IHyperLiquidBuilderFeeApprovalStore>(),
+            provider.GetRequiredService<IHyperLiquidBuilderFeeApprovalStore>());
         Assert.Null(provider.GetService<HyperLiquidClient>());
         Assert.Null(provider.GetService<IHyperLiquidExchange>());
     }

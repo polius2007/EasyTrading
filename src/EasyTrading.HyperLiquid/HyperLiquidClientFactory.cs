@@ -9,6 +9,7 @@ namespace EasyTrading.HyperLiquid;
 public sealed class HyperLiquidClientFactory : IHyperLiquidClientFactory
 {
     private readonly IHyperLiquidMetadataCatalog _metadataCatalog;
+    private readonly IHyperLiquidBuilderFeeApprovalStore? _builderFeeApprovalStore;
     private readonly ILoggerFactory? _loggerFactory;
 
     /// <summary>Creates a factory over the supplied shared metadata catalog.</summary>
@@ -21,16 +22,43 @@ public sealed class HyperLiquidClientFactory : IHyperLiquidClientFactory
         _loggerFactory = loggerFactory;
     }
 
+    /// <summary>
+    /// Creates a factory over the supplied shared metadata and builder-fee approval stores.
+    /// </summary>
+    public HyperLiquidClientFactory(
+        IHyperLiquidMetadataCatalog metadataCatalog,
+        IHyperLiquidBuilderFeeApprovalStore builderFeeApprovalStore,
+        ILoggerFactory? loggerFactory = null)
+    {
+        ArgumentNullException.ThrowIfNull(metadataCatalog);
+        ArgumentNullException.ThrowIfNull(builderFeeApprovalStore);
+        _metadataCatalog = metadataCatalog;
+        _builderFeeApprovalStore = builderFeeApprovalStore;
+        _loggerFactory = loggerFactory;
+    }
+
     /// <inheritdoc />
     public HyperLiquidClient Create(
         HyperLiquidCredentials credentials,
         HyperLiquidClientOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(credentials);
-        return new HyperLiquidClient(
-            _metadataCatalog,
+        return CreateClient(
             CloneOptions(options, credentials),
-            CreateLogger());
+            _builderFeeApprovalStore);
+    }
+
+    /// <inheritdoc />
+    public HyperLiquidClient Create(
+        HyperLiquidCredentials credentials,
+        IHyperLiquidBuilderFeeApprovalStore builderFeeApprovalStore,
+        HyperLiquidClientOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(credentials);
+        ArgumentNullException.ThrowIfNull(builderFeeApprovalStore);
+        return CreateClient(
+            CloneOptions(options, credentials),
+            builderFeeApprovalStore);
     }
 
     /// <inheritdoc />
@@ -41,15 +69,54 @@ public sealed class HyperLiquidClientFactory : IHyperLiquidClientFactory
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(credentials);
-        return new HyperLiquidClient(
+        return CreateClient(
             httpClient,
-            _metadataCatalog,
             CloneOptions(options, credentials),
-            CreateLogger());
+            _builderFeeApprovalStore);
+    }
+
+    /// <inheritdoc />
+    public HyperLiquidClient Create(
+        HttpClient httpClient,
+        HyperLiquidCredentials credentials,
+        IHyperLiquidBuilderFeeApprovalStore builderFeeApprovalStore,
+        HyperLiquidClientOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(credentials);
+        ArgumentNullException.ThrowIfNull(builderFeeApprovalStore);
+        return CreateClient(
+            httpClient,
+            CloneOptions(options, credentials),
+            builderFeeApprovalStore);
     }
 
     private ILogger<HyperLiquidClient>? CreateLogger()
         => _loggerFactory?.CreateLogger<HyperLiquidClient>();
+
+    private HyperLiquidClient CreateClient(
+        HyperLiquidClientOptions options,
+        IHyperLiquidBuilderFeeApprovalStore? builderFeeApprovalStore)
+        => builderFeeApprovalStore is null
+            ? new HyperLiquidClient(_metadataCatalog, options, CreateLogger())
+            : new HyperLiquidClient(
+                _metadataCatalog,
+                builderFeeApprovalStore,
+                options,
+                CreateLogger());
+
+    private HyperLiquidClient CreateClient(
+        HttpClient httpClient,
+        HyperLiquidClientOptions options,
+        IHyperLiquidBuilderFeeApprovalStore? builderFeeApprovalStore)
+        => builderFeeApprovalStore is null
+            ? new HyperLiquidClient(httpClient, _metadataCatalog, options, CreateLogger())
+            : new HyperLiquidClient(
+                httpClient,
+                _metadataCatalog,
+                builderFeeApprovalStore,
+                options,
+                CreateLogger());
 
     private static HyperLiquidClientOptions CloneOptions(
         HyperLiquidClientOptions? source,

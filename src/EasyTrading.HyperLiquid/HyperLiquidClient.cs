@@ -34,7 +34,13 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
 
     /// <summary>Construct a HyperLiquid client with explicit options. Creates an internal <see cref="HttpClient"/>.</summary>
     public HyperLiquidClient(HyperLiquidClientOptions options, ILogger<HyperLiquidClient>? logger = null)
-        : this(CreateHttpClient(options), options, ownsHttp: true, metadataCatalog: null, logger)
+        : this(
+            CreateHttpClient(options),
+            options,
+            ownsHttp: true,
+            metadataCatalog: null,
+            builderFeeApprovalStore: null,
+            logger)
     {
     }
 
@@ -46,7 +52,13 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
 
     /// <summary>Construct with a caller-supplied <see cref="HttpClient"/>. The supplied client is not disposed.</summary>
     public HyperLiquidClient(HttpClient httpClient, HyperLiquidClientOptions options, ILogger<HyperLiquidClient>? logger = null)
-        : this(httpClient, options, ownsHttp: false, metadataCatalog: null, logger)
+        : this(
+            httpClient,
+            options,
+            ownsHttp: false,
+            metadataCatalog: null,
+            builderFeeApprovalStore: null,
+            logger)
     {
     }
 
@@ -58,7 +70,32 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
         IHyperLiquidMetadataCatalog metadataCatalog,
         HyperLiquidClientOptions options,
         ILogger<HyperLiquidClient>? logger = null)
-        : this(CreateHttpClient(options), options, ownsHttp: true, metadataCatalog, logger)
+        : this(
+            CreateHttpClient(options),
+            options,
+            ownsHttp: true,
+            metadataCatalog,
+            builderFeeApprovalStore: null,
+            logger)
+    {
+    }
+
+    /// <summary>
+    /// Constructs a client with internally owned HTTP transport and shared metadata and
+    /// builder-fee approval stores.
+    /// </summary>
+    public HyperLiquidClient(
+        IHyperLiquidMetadataCatalog metadataCatalog,
+        IHyperLiquidBuilderFeeApprovalStore builderFeeApprovalStore,
+        HyperLiquidClientOptions options,
+        ILogger<HyperLiquidClient>? logger = null)
+        : this(
+            CreateHttpClient(options),
+            options,
+            ownsHttp: true,
+            metadataCatalog,
+            builderFeeApprovalStore,
+            logger)
     {
     }
 
@@ -71,7 +108,33 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
         IHyperLiquidMetadataCatalog metadataCatalog,
         HyperLiquidClientOptions options,
         ILogger<HyperLiquidClient>? logger = null)
-        : this(httpClient, options, ownsHttp: false, metadataCatalog, logger)
+        : this(
+            httpClient,
+            options,
+            ownsHttp: false,
+            metadataCatalog,
+            builderFeeApprovalStore: null,
+            logger)
+    {
+    }
+
+    /// <summary>
+    /// Constructs a client with caller-owned HTTP transport and shared metadata and builder-fee
+    /// approval stores.
+    /// </summary>
+    public HyperLiquidClient(
+        HttpClient httpClient,
+        IHyperLiquidMetadataCatalog metadataCatalog,
+        IHyperLiquidBuilderFeeApprovalStore builderFeeApprovalStore,
+        HyperLiquidClientOptions options,
+        ILogger<HyperLiquidClient>? logger = null)
+        : this(
+            httpClient,
+            options,
+            ownsHttp: false,
+            metadataCatalog,
+            builderFeeApprovalStore,
+            logger)
     {
     }
 
@@ -80,6 +143,7 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
         HyperLiquidClientOptions options,
         bool ownsHttp,
         IHyperLiquidMetadataCatalog? metadataCatalog,
+        IHyperLiquidBuilderFeeApprovalStore? builderFeeApprovalStore,
         ILogger<HyperLiquidClient>? logger)
     {
         ArgumentNullException.ThrowIfNull(http);
@@ -110,7 +174,13 @@ public sealed class HyperLiquidClient : IHyperLiquidExchange
         _ws = new WebSocketClient(_options, _logger);
 
         Markets   = new Markets(info);
-        Orders    = new Orders(info, exchange, metadataProvider, _options, _logger);
+        Orders    = new Orders(
+            info,
+            exchange,
+            metadataProvider,
+            _options,
+            _logger,
+            builderFeeApprovalStore);
         Positions = new Positions(info, exchange, metadataProvider, _options);
         Trades    = new Trades(info, _options);
         Account   = new Account(info, exchange, _options);

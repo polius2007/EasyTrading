@@ -14,11 +14,13 @@ internal sealed class Orders(
     ExchangeClient exchange,
     IAssetMetadataProvider meta,
     HyperLiquidClientOptions options,
-    ILogger? logger = null) : IOrders
+    ILogger? logger = null,
+    IHyperLiquidBuilderFeeApprovalStore? builderFeeApprovalStore = null) : IOrders
 {
     // In-memory cache: which (user, builder) pairs have already been approved this process.
     // Avoids a per-order maxBuilderFee round-trip after the first.
     private static readonly ConcurrentDictionary<string, bool> _builderApproved = new();
+    private static readonly TimeSpan BuilderFeeApprovalFailureCooldown = TimeSpan.FromMinutes(30);
 
     // ─── Read methods (Phase 2) ──────────────────────────────────────────────
 
@@ -505,6 +507,140 @@ internal sealed class Orders(
             .Add("f", wireFee));
     }
 
+    private async Task<bool> EnsureBuilderApprovedAsync(
+        BuilderFee fee,
+        int requiredWireFee,
+        CancellationToken ct)
+    {
+        if (builderFeeApprovalStore is null)
+        {
+            return await EnsureBuilderApprovedLegacyAsync(
+                fee,
+                requiredWireFee,
+                ct).ConfigureAwait(false);
+        }
+
+        var user = options.Credentials?.MasterAddress;
+        if (user is null)
+            return false;
+
+        var key = new HyperLiquidBuilderFeeApprovalKey(
+            options.Network,
+            options.GetEffectiveRestBaseUrl(),
+            user,
+            fee.BuilderAddress);
+        var state = await builderFeeApprovalStore.GetOrRefreshAsync(
+            key,
+            requiredWireFee,
+            refreshCt => RefreshBuilderFeeApprovalAsync(
+                user,
+                fee,
+                requiredWireFee,
+                refreshCt),
+            ct).ConfigureAwait(false);
+
+        return state.ApprovedWireFee >= requiredWireFee;
+    }
+
+    private async Task<HyperLiquidBuilderFeeApprovalState> RefreshBuilderFeeApprovalAsync(
+        string user,
+        BuilderFee fee,
+        int requiredWireFee,
+        CancellationToken ct)
+    {
+        var checkedAt = DateTimeOffset.UtcNow;
+        decimal currentMax;
+        try
+        {
+            currentMax = await info.PostAsync<decimal>(new
+            {
+                type = "maxBuilderFee",
+                user,
+                builder = fee.BuilderAddress.ToLowerInvariant(),
+            }, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger?.LogWarning(
+                ex,
+                "Builder fee approval check failed for builder {Builder} and user {Master}. "
+                + "Orders will be placed without builder routing until the retry cooldown expires.",
+                fee.BuilderAddress,
+                user);
+            return RetryState(approvedWireFee: 0, checkedAt);
+        }
+
+        var approvedWireFee = Math.Max(0, (int)currentMax);
+        if (approvedWireFee >= requiredWireFee)
+        {
+            return new HyperLiquidBuilderFeeApprovalState(
+                approvedWireFee,
+                checkedAt);
+        }
+
+        var nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var maxFeeRatePct = (fee.FeeRate * 100m)
+            .ToString("0.######", CultureInfo.InvariantCulture) + "%";
+        var approve = new HlMap()
+            .Add("type", "approveBuilderFee")
+            .Add("maxFeeRate", maxFeeRatePct)
+            .Add("builder", fee.BuilderAddress.ToLowerInvariant())
+            .Add("nonce", nonce);
+        var schema = new (string Name, string Type)[]
+        {
+            ("hyperliquidChain", "string"),
+            ("maxFeeRate", "string"),
+            ("builder", "address"),
+            ("nonce", "uint64"),
+        };
+
+        var creds = options.Credentials!;
+        var approveKey = !string.IsNullOrEmpty(creds.MasterPrivateKey)
+            ? creds.MasterPrivateKey
+            : creds.PrivateKey;
+
+        try
+        {
+            await exchange.SendUserAsyncWithKey(
+                approve,
+                "ApproveBuilderFee",
+                schema,
+                approveKey,
+                ct).ConfigureAwait(false);
+            return new HyperLiquidBuilderFeeApprovalState(
+                requiredWireFee,
+                checkedAt);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger?.LogWarning(
+                ex,
+                "Builder fee approval failed for builder {Builder} and user {Master}. "
+                + "Orders will be placed without builder routing for the next "
+                + "{CooldownMinutes} minutes.",
+                fee.BuilderAddress,
+                user,
+                BuilderFeeApprovalFailureCooldown.TotalMinutes);
+            return RetryState(approvedWireFee, checkedAt);
+        }
+    }
+
+    private static HyperLiquidBuilderFeeApprovalState RetryState(
+        int approvedWireFee,
+        DateTimeOffset checkedAt)
+        => new(
+            approvedWireFee,
+            checkedAt,
+            checkedAt + BuilderFeeApprovalFailureCooldown);
+
     /// <summary>
     /// Ensure this (user, builder) pair has at least <paramref name="requiredWireFee"/> approved.
     /// Returns <c>true</c> if approved (either previously or by this call); <c>false</c> if the
@@ -512,7 +648,7 @@ internal sealed class Orders(
     /// the current order. Failures are NOT cached — every subsequent order retries the check so
     /// that a manual UI approval picks up automatically.
     /// </summary>
-    private async Task<bool> EnsureBuilderApprovedAsync(BuilderFee fee, int requiredWireFee, CancellationToken ct)
+    private async Task<bool> EnsureBuilderApprovedLegacyAsync(BuilderFee fee, int requiredWireFee, CancellationToken ct)
     {
         var user = options.Credentials?.MasterAddress;
         if (user is null) return false; // no creds → no signing happens, the order itself will fail later

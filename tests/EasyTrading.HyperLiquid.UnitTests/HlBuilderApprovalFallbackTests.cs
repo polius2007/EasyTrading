@@ -82,6 +82,59 @@ public sealed class HlBuilderApprovalFallbackTests
         Assert.Equal(2, maxFeeChecks);
     }
 
+    [Fact]
+    public async Task Factory_clients_share_failed_approval_cooldown()
+    {
+        var ctx = NewContext();
+        ctx.Handler.OnExchangePost = (action, body) =>
+        {
+            var type = action.GetProperty("type").GetString();
+            return type switch
+            {
+                "approveBuilderFee" => ExchangeError(
+                    "Must be signed by the user's main wallet, not an agent/API wallet."),
+                "order" => OrderRestingOk(orderId: 5L),
+                _ => ExchangeError($"unexpected action type {type}"),
+            };
+        };
+
+        using var metadataCatalog = new HyperLiquidMetadataCatalog(ctx.Http);
+        await metadataCatalog.WarmUpAsync(
+            new HyperLiquidMetadataScope(HyperLiquidNetwork.Testnet));
+        using var approvalStore = new HyperLiquidBuilderFeeApprovalStore();
+        var factory = new HyperLiquidClientFactory(metadataCatalog, approvalStore);
+        var credentials = ctx.Options.Credentials!;
+
+        await using var first = factory.Create(ctx.Http, credentials, ctx.Options);
+        await using var second = factory.Create(ctx.Http, credentials, ctx.Options);
+
+        await first.Orders.PlaceLimitAsync(
+            "BTC",
+            OrderSide.Buy,
+            50_000m,
+            0.001m,
+            TimeInForce.Alo);
+        await second.Orders.PlaceLimitAsync(
+            "BTC",
+            OrderSide.Buy,
+            50_000m,
+            0.001m,
+            TimeInForce.Alo);
+
+        Assert.Equal(
+            1,
+            ctx.Handler.Calls.Count(call =>
+                call.ActionType == "maxBuilderFee"));
+        Assert.Equal(
+            1,
+            ctx.Handler.Calls.Count(call =>
+                call.ActionType == "approveBuilderFee"));
+        Assert.Equal(
+            2,
+            ctx.Handler.Calls.Count(call =>
+                call.ActionType == "order"));
+    }
+
     // ─── Test 3: approve failure logs a warning that points to the manual approval URL ──
 
     [Fact]

@@ -86,7 +86,7 @@ options.Credentials = new HyperLiquidCredentials(
 
 `masterAddress` is the wallet whose positions and balances the bot trades against; the agent key signs the actions.
 
-### Multiple accounts with shared metadata
+### Multiple accounts with shared metadata and fee approval state
 
 Use the parameterless registration when one application creates a separate client for each account:
 
@@ -113,14 +113,31 @@ await using var accountClient = factory.Create(
     });
 ```
 
-This mode registers one thread-safe metadata catalog and one client factory. It does not register
-a default `HyperLiquidClient` or `IHyperLiquidExchange`. Call `WarmUpAsync` once per network or
-custom REST endpoint before trading. Factory-created clients share only public asset metadata;
-credentials, HTTP ownership, nonces, and WebSocket state remain isolated per client. Their trading
-methods read the prepared catalog and do not fetch `meta` or `spotMeta` implicitly.
+This mode registers one thread-safe metadata catalog, one builder-fee approval store, and one client
+factory. It does not register a default `HyperLiquidClient` or `IHyperLiquidExchange`. Call
+`WarmUpAsync` once per network or custom REST endpoint before trading. Factory-created clients
+share only public asset metadata and non-secret fee-approval state; credentials, HTTP ownership,
+nonces, and WebSocket state remain isolated per client. Their trading methods read the prepared
+metadata catalog and do not fetch `meta` or `spotMeta` implicitly.
+
+The shared approval store coalesces concurrent `maxBuilderFee` checks for the same
+network/user/builder. A failed check or approval starts a 30-minute cooldown; orders continue
+without builder routing during that period. To isolate a group of clients, pass a dedicated store
+to the factory overload:
+
+```csharp
+using var approvalStore = new HyperLiquidBuilderFeeApprovalStore();
+await using var isolatedClient = factory.Create(
+    credentials,
+    approvalStore,
+    new HyperLiquidClientOptions
+    {
+        Network = HyperLiquidNetwork.Mainnet,
+    });
+```
 
 The configured `AddHyperLiquid(options => ...)` overload remains the simpler choice for a
-single account and keeps its existing lazy, client-local metadata cache.
+single account and keeps its existing lazy, client-local metadata and builder-fee behavior.
 
 ## 4. First trade — start on testnet
 

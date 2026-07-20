@@ -157,5 +157,6 @@ public sealed class HyperLiquidClientSmokeTests
         Assert.Same(concrete, hl);
         Assert.Same(concrete, cross);
         Assert.Equal(HyperLiquidNetwork.Testnet, concrete.Options.Network);
+        Assert.Null(sp.GetService<IHyperLiquidBuilderFeeApprovalStore>());
     }
 }

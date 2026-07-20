@@ -188,6 +188,11 @@ services.AddHyperLiquid(o =>
 o.BuilderFee = new BuilderFee("0x0", FeeRate: 0m);
 ```
 
+The parameterless `AddHyperLiquid()` registration also adds a singleton
+`IHyperLiquidBuilderFeeApprovalStore`. Clients created by `IHyperLiquidClientFactory` share
+successful checks and a 30-minute retry cooldown, preventing duplicate fee-approval requests when
+multiple account clients place orders concurrently.
+
 ## Use one strategy on multiple DEXes
 
 Inject `IExchangeClient` (the cross-DEX interface) instead of `IHyperLiquidExchange`. Your code never names the venue:

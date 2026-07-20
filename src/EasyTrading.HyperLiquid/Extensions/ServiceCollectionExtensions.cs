@@ -22,6 +22,9 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(builder);
 
         builder.Services.TryAddSingleton<IHyperLiquidMetadataCatalog, HyperLiquidMetadataCatalog>();
+        builder.Services.TryAddSingleton<
+            IHyperLiquidBuilderFeeApprovalStore,
+            HyperLiquidBuilderFeeApprovalStore>();
         builder.Services.TryAddSingleton<IHyperLiquidClientFactory, HyperLiquidClientFactory>();
 
         return builder;
