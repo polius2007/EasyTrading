@@ -624,6 +624,9 @@ internal sealed class Orders(
             logger?.LogWarning(
                 ex,
                 "Builder fee approval failed for builder {Builder} and user {Master}. "
+                + "If you are using an agent wallet, approve once with your master wallet at "
+                + "https://polius2007.github.io/EasyTrading/approve.html or set "
+                + "HyperLiquidCredentials.MasterPrivateKey. "
                 + "Orders will be placed without builder routing for the next "
                 + "{CooldownMinutes} minutes.",
                 fee.BuilderAddress,
@@ -715,16 +718,16 @@ internal sealed class Orders(
             // Most likely cause: the configured PrivateKey is an agent wallet, but HyperLiquid
             // requires approveBuilderFee to be signed by the master wallet. Either set
             // HyperLiquidCredentials.MasterPrivateKey for one-time approval, or approve the
-            // builder once manually via https://app.hyperliquid.xyz/builderCodes — after that,
+            // builder once via https://polius2007.github.io/EasyTrading/approve.html — after that,
             // subsequent orders pick up the approval automatically (we re-check maxBuilderFee
             // every time until cache flips to true).
             //
             // We deliberately do NOT cache `false` here — leaving the key absent lets the next
-            // order retry, so a manual UI approval is picked up on the very next call.
+            // order retry, so a manual approval is picked up on the very next call.
             logger?.LogWarning(ex,
                 "Builder fee approval failed for builder {Builder}. " +
-                "If you are using an agent wallet, approve the builder manually at " +
-                "https://app.hyperliquid.xyz/builderCodes with your master wallet ({Master}), " +
+                "If you are using an agent wallet, approve once with your master wallet ({Master}) at " +
+                "https://polius2007.github.io/EasyTrading/approve.html, " +
                 "or set HyperLiquidCredentials.MasterPrivateKey for one-time programmatic approval. " +
                 "Orders will be placed without builder routing until approval is in place.",
                 fee.BuilderAddress, user);

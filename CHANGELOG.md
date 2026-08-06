@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.5] — Builder-fee approval page + ecosystem docs
+
+No API changes; all packages ship in lockstep.
+
+### Added
+
+- **Hosted builder-fee approval page** —
+  [polius2007.github.io/EasyTrading/approve.html](https://polius2007.github.io/EasyTrading/approve.html)
+  (`docs/approve.html`, deployed with the DocFX site). One-time gasless EIP-712
+  `approveBuilderFee` signature with the master wallet for agent-wallet setups:
+  connects any EIP-1193 wallet, checks current approval (`maxBuilderFee`) and
+  account-abstraction mode (`userAbstraction`, warns on unified / portfolio-margin
+  where HyperLiquid rejects approvals), signs with the wallet's active chain id
+  (newer wallets require the EIP-712 domain to match), posts to `/exchange`.
+- **README "Used in production" section** — the EasyTrading.pw ecosystem
+  (Copytrader, TradeStat, XTester) now documented in README and `llms.txt`.
+
+### Changed
+
+- Builder-fee approval warnings in `Orders` now point agent-wallet users at the
+  hosted approval page instead of `app.hyperliquid.xyz/builderCodes` (which can
+  only view/revoke, not create approvals).
+- `docs/recipes.md` — new "One-time approval when trading with an agent wallet"
+  recipe (approval page / one-run `MasterPrivateKey` / opt-out) including the
+  unified-account gotcha. README agent-wallet note updated the same way.
+
 ## [1.2.4] — Multi-tenant HyperLiquid: shared metadata catalog + pluggable builder-fee approval store + client factory
 
 Additive expansion of the HyperLiquid client surface for applications that host

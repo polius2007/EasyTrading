@@ -15,7 +15,7 @@
       { "files": [ "**/*.md", "**/*.yml" ], "src": "docs" }
     ],
     "resource": [
-      { "files": [ "images/**" ], "src": "docs" }
+      { "files": [ "images/**", "approve.html" ], "src": "docs" }
     ],
     "output": "_site",
     "globalMetadata": {

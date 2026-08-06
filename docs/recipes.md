@@ -193,6 +193,23 @@ The parameterless `AddHyperLiquid()` registration also adds a singleton
 successful checks and a 30-minute retry cooldown, preventing duplicate fee-approval requests when
 multiple account clients place orders concurrently.
 
+### One-time approval when trading with an agent wallet
+
+HyperLiquid only accepts `approveBuilderFee` signed by the **master** wallet, so with an
+agent/API key the SDK cannot approve programmatically. Three ways to handle it:
+
+1. **Approval page** — open
+   [polius2007.github.io/EasyTrading/approve.html](https://polius2007.github.io/EasyTrading/approve.html)
+   with your master wallet and sign once (gasless EIP-712, no funds involved). The SDK re-checks
+   `maxBuilderFee` on every order and picks the approval up automatically.
+2. **`MasterPrivateKey` for the first run** — set it in `HyperLiquidCredentials` once; the SDK
+   approves on the first order. Remove the key afterwards.
+3. **Opt out** — set `BuilderFee` with `FeeRate: 0m` as shown above; no approval is ever needed.
+
+Gotcha: approvals are rejected while the account is in unified / portfolio-margin mode
+(`"Action disabled when unified account is active"`). Switch the account type to standard on
+the HyperLiquid Trade page first.
+
 ## Use one strategy on multiple DEXes
 
 Inject `IExchangeClient` (the cross-DEX interface) instead of `IHyperLiquidExchange`. Your code never names the venue:

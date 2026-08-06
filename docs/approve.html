@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="One-time HyperLiquid builder-fee approval for the EasyTrading SDK. Gasless EIP-712 signature with your master wallet.">
+<title>EasyTrading — HyperLiquid Builder Fee Approval</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: #0b0f14; color: #dce3ea;
+    min-height: 100vh; display: flex; justify-content: center; padding: 40px 16px;
+    line-height: 1.55;
+  }
+  .card {
+    width: 100%; max-width: 760px; background: #121821; border: 1px solid #1f2937;
+    border-radius: 14px; padding: 32px;
+  }
+  .brand { color: #22d3ee; font-weight: 700; letter-spacing: .02em; font-size: 13px; margin-bottom: 6px; }
+  h1 { font-size: 22px; margin-bottom: 10px; }
+  p.lead { color: #9aa7b4; font-size: 15px; margin-bottom: 8px; }
+  .addr { font-family: Consolas, monospace; font-size: 12px; color: #67e8f9; word-break: break-all; }
+  section { margin: 26px 0; }
+  h2 { font-size: 14px; color: #9aa7b4; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td { padding: 8px 4px; border-bottom: 1px solid #1c2532; }
+  td:last-child { text-align: right; font-family: Consolas, monospace; }
+  .ok   { color: #4ade80; }
+  .bad  { color: #f87171; }
+  .warn { color: #fbbf24; }
+  button {
+    background: #0891b2; color: #fff; border: 0; border-radius: 8px;
+    padding: 13px 20px; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%;
+  }
+  button:hover { background: #0aa8cf; }
+  button:disabled { background: #334155; cursor: not-allowed; }
+  pre {
+    background: #0b0f14; border: 1px solid #1c2532; border-radius: 8px;
+    padding: 12px; font-size: 12px; white-space: pre-wrap; word-break: break-all;
+    margin-top: 12px; max-height: 240px; overflow-y: auto;
+  }
+  .hint { font-size: 13px; color: #8b98a5; margin-top: 10px; }
+  .hidden { display: none; }
+  details { margin-top: 10px; font-size: 14px; }
+  summary { cursor: pointer; color: #22d3ee; padding: 6px 0; }
+  details p { color: #9aa7b4; margin: 6px 0 12px; }
+  details a, .hint a, p.lead a { color: #22d3ee; text-decoration: none; }
+  .banner {
+    border: 1px solid #b45309; background: #78350f22; color: #fbbf24;
+    border-radius: 8px; padding: 12px 14px; font-size: 13px; margin-top: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">EASYTRADING.PW</div>
+  <h1>HyperLiquid Builder Fee Approval</h1>
+  <p class="lead">
+    The <a href="https://github.com/polius2007/EasyTrading">EasyTrading SDK</a> attaches a
+    <b>0.005%</b> builder fee to orders it places on HyperLiquid — 20&times; below HyperLiquid's
+    0.1% cap — to fund continued development. HyperLiquid requires your <b>one-time,
+    gasless signature</b> before any builder fee can ever be charged: no approval, no fee.
+  </p>
+  <p class="lead">
+    If you trade with an <b>agent/API wallet</b> (recommended), the SDK cannot sign this approval
+    for you — do it here once with your <b>master wallet</b>. The SDK detects it automatically:
+    on the next order, or within 30 minutes if it recently cached a failed approval check
+    (restarting the bot applies it immediately).
+  </p>
+
+  <section>
+    <h2>1 · Connect &amp; check</h2>
+    <button id="btnConnect">Connect wallet (master account)</button>
+    <table id="statusTable" class="hidden">
+      <tr><td>Connected wallet</td><td id="stAddr">—</td></tr>
+      <tr><td>Approval for EasyTrading builder</td><td id="stApprove">—</td></tr>
+      <tr><td>Account mode</td><td id="stMode">—</td></tr>
+    </table>
+    <div id="modeBanner" class="banner hidden">
+      Your account is in <b>unified / portfolio margin</b> mode — HyperLiquid rejects builder-fee
+      approvals in this mode ("Action disabled when unified account is active"). Switch to the
+      standard account type first: app.hyperliquid.xyz → any perp Trade page → account-type
+      button (top-right of the order form) → choose the standard / manual option → then retry here.
+    </div>
+  </section>
+
+  <section>
+    <h2>2 · Approve (one gasless signature)</h2>
+    <button id="btnApprove" disabled>Sign approval — max 0.005% per order</button>
+    <div class="hint">
+      This is a standard EIP-712 typed-data signature: it costs no gas, moves no funds, and grants
+      no access to your wallet. It only authorizes the builder address
+      <span class="addr">0xc6B9AC3E4Be8911e00B649BE96d02317Dd61ff89</span> to receive up to 0.005%
+      on orders <i>you</i> place. Revoke any time at
+      <a href="https://app.hyperliquid.xyz/builderCodes">app.hyperliquid.xyz/builderCodes</a>.
+    </div>
+    <pre id="log" class="hidden" role="status" aria-live="polite"></pre>
+  </section>
+
+  <section>
+    <h2>FAQ</h2>
+    <details>
+      <summary>What exactly am I signing?</summary>
+      <p>A HyperLiquid <code>approveBuilderFee</code> action (primary type
+      <code>HyperliquidTransaction:ApproveBuilderFee</code>) with <code>maxFeeRate = 0.005%</code>.
+      Your wallet shows the full payload before you sign. It is not a transaction and cannot touch funds.</p>
+    </details>
+    <details>
+      <summary>Why does the SDK need this page at all?</summary>
+      <p>HyperLiquid only accepts builder-fee approvals signed by your <b>master</b> wallet.
+      If you configured EasyTrading with an agent/API key (best practice), the SDK can't produce
+      that signature — so it trades without the fee and logs a pointer here. Alternatively, set
+      <code>HyperLiquidCredentials.MasterPrivateKey</code> once and the SDK approves programmatically.</p>
+    </details>
+    <details>
+      <summary>How do I opt out instead?</summary>
+      <p>Set <code>HyperLiquidClientOptions.BuilderFee</code> with <code>FeeRate: 0m</code> — the
+      SDK then sends orders without any builder field and never requests approval. (Setting your
+      own builder address with a positive rate routes the fee to your address instead.)
+      Note: if the SDK is configured with your <b>master</b> private key it auto-approves on the
+      first order, so with a master-key setup the zero-rate option is the reliable opt-out;
+      merely not signing here only prevents the fee for agent-wallet setups.</p>
+    </details>
+  </section>
+</div>
+
+<script>
+const API      = "https://api.hyperliquid.xyz";
+const BUILDER  = "0xc6b9ac3e4be8911e00b649be96d02317dd61ff89";
+const MAX_FEE_RATE  = "0.005%";   // wire 5 = tenths of a basis point
+const REQUIRED_WIRE = 5;
+
+let connected = null;
+
+const $ = id => document.getElementById(id);
+const log = m => { const el = $("log"); el.classList.remove("hidden"); el.textContent += m + "\n"; el.scrollTop = el.scrollHeight; };
+
+async function info(body) {
+  const r = await fetch(API + "/info", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error("HyperLiquid /info returned " + r.status);
+  return r.json();
+}
+
+// API-derived values are rendered via textContent only — never innerHTML.
+function setCell(id, cls, text) {
+  const span = document.createElement("span");
+  span.className = cls;
+  span.textContent = text;
+  $(id).replaceChildren(span);
+}
+
+async function refreshStatus(addr) {
+  $("statusTable").classList.remove("hidden");
+  $("stAddr").textContent = addr.slice(0, 8) + "…" + addr.slice(-6);
+  $("stApprove").textContent = $("stMode").textContent = "…";
+  try {
+    const [max, mode] = await Promise.all([
+      info({ type: "maxBuilderFee", user: addr, builder: BUILDER }),
+      info({ type: "userAbstraction", user: addr }),
+    ]);
+
+    const approved = Number(max) || 0;
+    setCell("stApprove", approved >= REQUIRED_WIRE ? "ok" : "bad",
+      approved >= REQUIRED_WIRE
+        ? `✔ approved (${approved / 1000}%) — nothing to do`
+        : "✘ not approved");
+
+    const modeStr = typeof mode === "string" ? mode : JSON.stringify(mode);
+    const unified = modeStr === "unifiedAccount" || modeStr === "portfolioMargin";
+    setCell("stMode", unified ? "warn" : "ok", modeStr);
+    $("modeBanner").classList.toggle("hidden", !unified);
+
+    $("btnApprove").disabled = approved >= REQUIRED_WIRE;
+  } catch (e) {
+    setCell("stApprove", "bad", "error: " + (e?.message ?? e));
+    setCell("stMode", "warn", "unknown");
+    $("btnApprove").disabled = false; // state unknown — allow a retry
+  }
+}
+
+async function connect() {
+  const btn = $("btnConnect");
+  btn.disabled = true;
+  try {
+    if (!window.ethereum) throw new Error("No EIP-1193 wallet found. Open this page in a browser with MetaMask/Rabby installed.");
+    const [addr] = await window.ethereum.request({ method: "eth_requestAccounts" });
+    connected = addr.toLowerCase();
+    await refreshStatus(connected); // refreshStatus owns the Approve button state
+  } catch (e) {
+    log("✘ " + (e?.message ?? e));
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function approve() {
+  const btn = $("btnApprove");
+  btn.disabled = true;
+  try {
+    if (!connected) throw new Error("Connect your wallet first.");
+
+    // Re-read the active account: the user may have switched wallets since connecting.
+    const accounts = await window.ethereum.request({ method: "eth_accounts" });
+    const active = accounts?.[0]?.toLowerCase();
+    if (!active) throw new Error("Wallet disconnected — click Connect again.");
+    if (active !== connected) {
+      connected = active;
+      log("Active wallet changed — using " + active);
+    }
+
+    // Newer wallets require the EIP-712 domain chainId to match the wallet's active chain.
+    // HyperLiquid accepts any signing chain as long as signatureChainId matches the domain.
+    const chainIdHex = await window.ethereum.request({ method: "eth_chainId" });
+    const chainIdNum = parseInt(chainIdHex, 16);
+    log("Wallet chain: " + chainIdNum + " (" + chainIdHex + ")");
+
+    const nonce = Date.now();
+    const typedData = {
+      domain: {
+        name: "HyperliquidSignTransaction",
+        version: "1",
+        chainId: chainIdNum,
+        verifyingContract: "0x0000000000000000000000000000000000000000",
+      },
+      types: {
+        EIP712Domain: [
+          { name: "name", type: "string" },
+          { name: "version", type: "string" },
+          { name: "chainId", type: "uint256" },
+          { name: "verifyingContract", type: "address" },
+        ],
+        "HyperliquidTransaction:ApproveBuilderFee": [
+          { name: "hyperliquidChain", type: "string" },
+          { name: "maxFeeRate", type: "string" },
+          { name: "builder", type: "address" },
+          { name: "nonce", type: "uint64" },
+        ],
+      },
+      primaryType: "HyperliquidTransaction:ApproveBuilderFee",
+      message: {
+        hyperliquidChain: "Mainnet",
+        maxFeeRate: MAX_FEE_RATE,
+        builder: BUILDER,
+        nonce: nonce,
+      },
+    };
+
+    log("Requesting EIP-712 signature…");
+    const sigHex = await window.ethereum.request({
+      method: "eth_signTypedData_v4",
+      params: [connected, JSON.stringify(typedData)],
+    });
+    log("Signature received.");
+
+    const r = "0x" + sigHex.slice(2, 66);
+    const s = "0x" + sigHex.slice(66, 130);
+    let v = parseInt(sigHex.slice(130, 132), 16);
+    if (v < 27) v += 27;
+
+    const payload = {
+      action: {
+        type: "approveBuilderFee",
+        hyperliquidChain: "Mainnet",
+        signatureChainId: chainIdHex,
+        maxFeeRate: MAX_FEE_RATE,
+        builder: BUILDER,
+        nonce: nonce,
+      },
+      nonce: nonce,
+      signature: { r, s, v },
+    };
+
+    log("Posting to HyperLiquid /exchange…");
+    const resp = await fetch(API + "/exchange", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const result = await resp.json();
+    log("Response: " + JSON.stringify(result));
+
+    if (result?.status === "ok") {
+      log("✔ Done! The EasyTrading SDK detects this automatically — on the next order, or " +
+          "within 30 minutes if it recently cached a failed check (a bot restart applies it immediately).");
+    } else {
+      const msg = String(result?.response ?? "");
+      if (msg.includes("unified account")) {
+        log("✘ Your account is in unified mode — switch to the standard account type (see the banner above), then retry.");
+      } else if (msg.includes("does not exist") || msg.toLowerCase().includes("signature")) {
+        log("✘ Signature rejected — make sure the connected wallet is your MASTER account (the one that owns the funds), not an agent/API wallet.");
+      }
+    }
+    // refreshStatus() sets the final button state: disabled when approved, enabled otherwise.
+    await refreshStatus(connected);
+  } catch (e) {
+    log("✘ " + (e?.message ?? e));
+    btn.disabled = false;
+  }
+}
+
+$("btnConnect").addEventListener("click", connect);
+$("btnApprove").addEventListener("click", approve);
+
+// Keep the UI honest when the user switches account or chain inside the wallet.
+if (window.ethereum?.on) {
+  window.ethereum.on("accountsChanged", accounts => {
+    connected = accounts?.[0]?.toLowerCase() ?? null;
+    if (connected) refreshStatus(connected);
+    else $("btnApprove").disabled = true;
+  });
+  window.ethereum.on("chainChanged", () => { if (connected) refreshStatus(connected); });
+}
+</script>
+</body>
+</html>

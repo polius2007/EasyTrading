@@ -160,7 +160,7 @@ public sealed class HlBuilderApprovalFallbackTests
         var warnings = captured.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
         Assert.NotEmpty(warnings);
         var msg = string.Join(" | ", warnings.Select(w => w.Message));
-        Assert.Contains("builderCodes", msg, StringComparison.Ordinal);
+        Assert.Contains("polius2007.github.io/EasyTrading/approve.html", msg, StringComparison.Ordinal);
         Assert.Contains(ctx.MasterAddress, msg, StringComparison.OrdinalIgnoreCase);
     }
 

@@ -13,7 +13,7 @@ EasyTrading is a multi-DEX trading client for .NET. The same `IExchangeClient` i
 
 ## Current status per venue
 
-**HyperLiquid `1.2.4`** — stable. Read / write / stream all functional against live mainnet.
+**HyperLiquid `1.2.5`** — stable. Read / write / stream all functional against live mainnet.
 EIP-712 L1 (phantom-agent) + user-signed flavours. WebSocket: 9 channels with reconnect +
 per-subscriber back-pressure. Pre-flight order validation (tick / lot / min-notional).
 REST retry policy with backoff + jitter and `Retry-After`. WebSocket gap recovery on user
@@ -25,13 +25,13 @@ Modify, batch ops, 9 stream channels). Every signed action is regression-pinned 
 21-fact `HlSignatureRecoveryRegressionTests` — sign + ECDSA-recover + assert recovered
 address matches the signing key, catching the wire-format bug class before NuGet release.
 
-**Aster Finance `1.2.4`** — stable. Same surface, EIP-712 signing under
+**Aster Finance `1.2.5`** — stable. Same surface, EIP-712 signing under
 `AsterSignTransaction` v1 / chainId 1666. Pre-flight validator wired to
 `/fapi/v3/exchangeInfo` filters (PRICE_FILTER / LOT_SIZE / MIN_NOTIONAL). WebSocket:
 Binance-style multiplex for market data + a separate listenKey-bound socket for user
 data with 30-min keepalive.
 
-**dYdX v4 `1.2.4`** — stable. Indexer REST + public WebSocket + signed Indexer reads +
+**dYdX v4 `1.2.5`** — stable. Indexer REST + public WebSocket + signed Indexer reads +
 full Cosmos SDK transaction signing (BIP-39 → BIP-32 → secp256k1 → bech32 → protobuf
 `TxRaw` → REST broadcast). End-to-end verified on testnet: `Testnet_PlaceLimit_and_Cancel`
 posts a far-from-market post-only BTC-USD buy from a freshly-faucet-funded wallet and

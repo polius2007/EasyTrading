@@ -11,8 +11,9 @@ namespace EasyTrading.HyperLiquid;
 /// <c>null</c>, the regular <see cref="PrivateKey"/> is used as fallback (which only works
 /// if it IS the master key — typical for testnet or non-agent setups). On mainnet with an
 /// agent wallet, either set this to your master key for one-time builder approval, or
-/// approve the builder manually via <c>https://app.hyperliquid.xyz/builderCodes</c> and
-/// leave this <c>null</c>.
+/// approve the builder once with your master wallet at
+/// <c>https://polius2007.github.io/EasyTrading/approve.html</c> and leave this <c>null</c>
+/// (existing approvals can be viewed and revoked at <c>https://app.hyperliquid.xyz/builderCodes</c>).
 /// </param>
 /// <remarks>
 /// For production use, prefer an agent wallet over the master account's private key — agents can be

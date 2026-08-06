@@ -15,9 +15,9 @@ A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClie
 
 | Exchange    | Package                              | REST | WebSocket | Signing | Latest                              |
 |-------------|--------------------------------------|:----:|:---------:|:-------:|:-----------------------------------:|
-| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅  |    ✅     |   ✅    | `1.2.4`                             |
-| Aster       | `EasyTrading.Aster`                  |  ✅  |    ✅     |   ✅    | `1.2.4`                             |
-| dYdX v4     | `EasyTrading.Dydx`                   |  ✅  |    ✅     |   ✅    | `1.2.4`                             |
+| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅  |    ✅     |   ✅    | `1.2.5`                             |
+| Aster       | `EasyTrading.Aster`                  |  ✅  |    ✅     |   ✅    | `1.2.5`                             |
+| dYdX v4     | `EasyTrading.Dydx`                   |  ✅  |    ✅     |   ✅    | `1.2.5`                             |
 
 Coverage summary:
 
@@ -44,7 +44,7 @@ tests + a gated live-mainnet audit harness (`HyperLiquidMainnetFullAuditTests`) 
 exercises 58 sub-checks against a real master / agent wallet — every read method, every
 order type (Limit GTC / ALO / IOC / FOK + Stop-Market / Stop-Limit / Take-Profit), Modify,
 batch operations, CancelAll, ScheduleCancel, Vaults / Staking reads, and 9 stream
-channels. All green at 1.2.4.
+channels. All green at 1.2.5.
 
 The 21-fact `HlSignatureRecoveryRegressionTests` suite signs every HL action type with a
 known key and verifies ECDSA recovery returns that key's address — the exact firewall that
@@ -142,9 +142,22 @@ Methods are grouped by entity. Everything about orders is on `Orders`; everythin
 
 ## Roadmap
 
-- [x] HyperLiquid — REST + WebSocket + EIP-712 signing + hardening → `1.2.4`
-- [x] Aster — REST + WebSocket + EIP-712 signing → `1.2.4`
-- [x] dYdX v4 — Indexer REST + WebSocket + Cosmos SDK signing (BIP-39 → BIP-32 → secp256k1 → bech32, full proto stack, REST broadcast), end-to-end verified on testnet → `1.2.4`
+- [x] HyperLiquid — REST + WebSocket + EIP-712 signing + hardening → `1.2.5`
+- [x] Aster — REST + WebSocket + EIP-712 signing → `1.2.5`
+- [x] dYdX v4 — Indexer REST + WebSocket + Cosmos SDK signing (BIP-39 → BIP-32 → secp256k1 → bech32, full proto stack, REST broadcast), end-to-end verified on testnet → `1.2.5`
+
+## Used in production — the EasyTrading.pw ecosystem
+
+EasyTrading is the exchange-connectivity layer of the [EasyTrading.pw](https://easytrading.pw)
+trading infrastructure and runs in production inside our own products:
+
+- **Copytrader** ([copytrader.pw](https://copytrader.pw)) — copy-trading platform: leader accounts
+  are mirrored to follower accounts across exchanges through this SDK.
+- **TradeStat** — trading statistics and performance analytics for exchange accounts.
+- **XTester** — strategy tester: build trading strategies on top of EasyTrading and backtest them
+  against historical market data, or use the tester standalone with its built-in strategy runtime.
+
+If you build a product on EasyTrading and want it listed here, open an issue or PR.
 
 ## Documentation
 
@@ -181,12 +194,17 @@ The HyperLiquid client attaches a 0.5 bps (0.005%) builder fee to every order by
 > to be signed by the master wallet, not an agent wallet. If you initialise the client with
 > an agent key (the recommended production setup), you have two options:
 >
-> 1. **Manual one-time approval** (simplest): visit
->    [`app.hyperliquid.xyz/builderCodes`](https://app.hyperliquid.xyz/builderCodes), connect
->    your master wallet, and approve the EasyTrading builder address with at least the
->    default 0.5 bps rate. Subsequent orders will pick up the approval automatically.
+> 1. **One-time approval page** (simplest): open
+>    [polius2007.github.io/EasyTrading/approve.html](https://polius2007.github.io/EasyTrading/approve.html),
+>    connect your master wallet, and sign the gasless EIP-712 approval. Subsequent orders
+>    pick it up automatically. Existing approvals can be viewed and revoked at
+>    [`app.hyperliquid.xyz/builderCodes`](https://app.hyperliquid.xyz/builderCodes).
 > 2. **Pass `MasterPrivateKey` in credentials** for the first run only, then remove it once
 >    approval has been recorded on-chain.
+>
+> Note: HyperLiquid rejects builder-fee approvals while the account is in *unified /
+> portfolio-margin* mode — switch the account type to standard first (Trade page →
+> account-type button on the order form).
 >
 > Until approval is in place, orders are placed without builder routing (a warning is logged);
 > placement itself is not blocked.
