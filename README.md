@@ -2,7 +2,7 @@
 
 A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClient` interface across every supported DEX; per-DEX clients add only what's venue-specific (e.g. vaults and staking on HyperLiquid).
 
-Battle-tested in production as the exchange layer of the [EasyTrading.pw](https://easytrading.pw) trading ecosystem — [Copytrader](https://copytrader.pw) (copy-trading), TradeStat (trade analytics), and XTester (strategy tester) all run on it. See [Used in production](#used-in-production--the-easytradingpw-ecosystem).
+Battle-tested in production as the exchange layer of the [EasyTrading.pw](https://easytrading.pw) trading ecosystem — [Copytrader](https://copytrader.pw) (copy-trading), [TradeStat](https://tradestat.pw) (trade analytics), and [XTester](https://xtester.pw) (strategy tester) all run on it. See [Used in production](#used-in-production--the-easytradingpw-ecosystem).
 
 [![NuGet](https://img.shields.io/nuget/v/EasyTrading.HyperLiquid?label=EasyTrading.HyperLiquid&logo=nuget)](https://www.nuget.org/packages/EasyTrading.HyperLiquid)
 [![Build](https://github.com/polius2007/EasyTrading/actions/workflows/ci.yml/badge.svg)](https://github.com/polius2007/EasyTrading/actions/workflows/ci.yml)
@@ -155,9 +155,11 @@ trading infrastructure and runs in production inside our own products:
 
 - **Copytrader** ([copytrader.pw](https://copytrader.pw)) — copy-trading platform: leader accounts
   are mirrored to follower accounts across exchanges through this SDK.
-- **TradeStat** — trading statistics and performance analytics for exchange accounts.
-- **XTester** — strategy tester: build trading strategies on top of EasyTrading and backtest them
-  against historical market data, or use the tester standalone with its built-in strategy runtime.
+- **TradeStat** ([tradestat.pw](https://tradestat.pw)) — trading statistics and performance
+  analytics for exchange accounts.
+- **XTester** ([xtester.pw](https://xtester.pw)) — strategy tester: build trading strategies on
+  top of EasyTrading and backtest them against historical market data, or use the tester
+  standalone with its built-in strategy runtime.
 
 If you build a product on EasyTrading and want it listed here, open an issue or PR.
 

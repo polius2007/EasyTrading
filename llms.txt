@@ -4,11 +4,11 @@
 
 ## Ecosystem
 
-EasyTrading is the exchange-connectivity layer of the EasyTrading.pw trading infrastructure and runs in production inside its products:
+EasyTrading is the exchange-connectivity layer of the EasyTrading.pw (https://easytrading.pw) trading infrastructure and runs in production inside its products:
 
 - Copytrader (https://copytrader.pw): copy-trading platform — leader accounts mirrored to follower accounts across exchanges through this SDK
-- TradeStat: trading statistics and performance analytics for exchange accounts
-- XTester: strategy tester — build strategies on top of EasyTrading and backtest them against historical data, or use the tester standalone
+- TradeStat (https://tradestat.pw): trading statistics and performance analytics for exchange accounts
+- XTester (https://xtester.pw): strategy tester — build strategies on top of EasyTrading and backtest them against historical data, or use the tester standalone
 
 ## Documentation
 
