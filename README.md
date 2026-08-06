@@ -2,6 +2,8 @@
 
 A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClient` interface across every supported DEX; per-DEX clients add only what's venue-specific (e.g. vaults and staking on HyperLiquid).
 
+Battle-tested in production as the exchange layer of the [EasyTrading.pw](https://easytrading.pw) trading ecosystem — [Copytrader](https://copytrader.pw) (copy-trading), TradeStat (trade analytics), and XTester (strategy tester) all run on it. See [Used in production](#used-in-production--the-easytradingpw-ecosystem).
+
 [![NuGet](https://img.shields.io/nuget/v/EasyTrading.HyperLiquid?label=EasyTrading.HyperLiquid&logo=nuget)](https://www.nuget.org/packages/EasyTrading.HyperLiquid)
 [![Build](https://github.com/polius2007/EasyTrading/actions/workflows/ci.yml/badge.svg)](https://github.com/polius2007/EasyTrading/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)

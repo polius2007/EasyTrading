@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <PackageId>EasyTrading.Core</PackageId>
-    <Description>Shared infrastructure for EasyTrading DEX clients — HTTP helpers with retry policy, WebSocket management, signing primitives. Pulled in transitively when you install a venue package (EasyTrading.HyperLiquid, EasyTrading.Aster, …).</Description>
+    <Description>Shared infrastructure for EasyTrading DEX clients — HTTP helpers with retry policy, WebSocket management, signing primitives. Pulled in transitively when you install a venue package (EasyTrading.HyperLiquid, EasyTrading.Aster, …). Part of the EasyTrading.pw trading ecosystem — powers Copytrader (copytrader.pw), TradeStat, and XTester in production.</Description>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>$(PackageTags);core;http;websocket;polly;retry</PackageTags>
   </PropertyGroup>

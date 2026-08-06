@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <PackageId>EasyTrading.Abstractions</PackageId>
-    <Description>Cross-DEX trading abstractions for .NET — interfaces and models (IExchangeClient, IOrders, IPositions, IMarkets, IStreams, OrderRequest, …) used by every EasyTrading exchange client (HyperLiquid, Aster, dYdX).</Description>
+    <Description>Cross-DEX trading abstractions for .NET — interfaces and models (IExchangeClient, IOrders, IPositions, IMarkets, IStreams, OrderRequest, …) used by every EasyTrading exchange client (HyperLiquid, Aster, dYdX). Part of the EasyTrading.pw trading ecosystem — powers Copytrader (copytrader.pw), TradeStat, and XTester in production.</Description>
     <PackageIcon>icon.png</PackageIcon>
     <!-- Append abstractions-specific tags to the base set in Directory.Build.props. -->
     <PackageTags>$(PackageTags);abstractions;interfaces;contracts</PackageTags>
