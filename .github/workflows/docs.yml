@@ -48,8 +48,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          # Pages backend intermittently takes >10 min to activate a deployment
-          # (2026-08-06: three healthy builds in a row were canceled by the default
-          # 600000 ms polling window while the deployment was still in_progress).
-          timeout: 1800000
