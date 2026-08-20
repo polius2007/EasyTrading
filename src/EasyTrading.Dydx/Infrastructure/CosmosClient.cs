@@ -46,6 +46,43 @@ internal sealed class CosmosClient
         return (num, seq);
     }
 
+    /// <summary>Fetch the latest positive validator block height for a short-term order.</summary>
+    public async Task<uint> GetLatestBlockHeightAsync(CancellationToken ct)
+    {
+        var url = new Uri(_validatorBaseUrl, "/cosmos/base/tendermint/v1beta1/blocks/latest");
+        var result = await Http.SendAsync(_http, HttpMethod.Get, url, content: null, _retry, ct).ConfigureAwait(false);
+        if ((int)result.StatusCode is < 200 or >= 300)
+            throw new ExchangeApiException(
+                $"Cosmos latest-block query failed ({(int)result.StatusCode}): {Truncate(result.Body)}");
+
+        try
+        {
+            using var doc = JsonDocument.Parse(result.Body);
+            if (doc.RootElement.TryGetProperty("block", out var block)
+                && block.TryGetProperty("header", out var header)
+                && header.TryGetProperty("height", out var heightElement)
+                && heightElement.ValueKind == JsonValueKind.String
+                && uint.TryParse(
+                    heightElement.GetString(),
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out var height)
+                && height > 0)
+            {
+                return height;
+            }
+        }
+        catch (JsonException ex)
+        {
+            throw new ExchangeApiException(
+                "Cosmos latest-block query returned invalid JSON.",
+                innerException: ex);
+        }
+
+        throw new ExchangeApiException(
+            "Cosmos latest-block query returned no valid positive uint32 height.");
+    }
+
     /// <summary>
     /// Broadcast a signed transaction. <paramref name="txBytes"/> is the output of
     /// <see cref="TransactionBuilder.BuildAndSign"/>. <paramref name="mode"/> is one of

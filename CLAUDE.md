@@ -6,9 +6,9 @@ This file is read automatically by Claude Code when working in this repository. 
 
 - `src/EasyTrading.Abstractions/` — cross-DEX interfaces and models, no runtime deps
 - `src/EasyTrading.Core/` — shared infrastructure (HTTP, WebSocket, signing helpers)
-- `src/EasyTrading.HyperLiquid/` — HyperLiquid client (REST + WebSocket + EIP-712 signing) — `1.2.5` on NuGet
-- `src/EasyTrading.Aster/` — Aster client (REST + WebSocket + EIP-712 signing) — `1.2.5` on NuGet
-- `src/EasyTrading.Dydx/` — dYdX v4 client (Indexer REST + WebSocket + signed Indexer reads + full Cosmos SDK transaction signing: BIP-39 → secp256k1 → bech32 → protobuf TxRaw → REST broadcast) — `1.2.5` on NuGet
+- `src/EasyTrading.HyperLiquid/` — HyperLiquid client (REST + WebSocket + EIP-712 signing) — `1.2.6` on NuGet
+- `src/EasyTrading.Aster/` — Aster client (REST + WebSocket + EIP-712 signing) — `1.2.6` on NuGet
+- `src/EasyTrading.Dydx/` — dYdX v4 client (Indexer REST + WebSocket + signed Indexer reads + full Cosmos SDK transaction signing: BIP-39 → secp256k1 → bech32 → protobuf TxRaw → REST broadcast) — `1.2.6` on NuGet
 - `tests/EasyTrading.HyperLiquid.UnitTests/` — HL unit + integration tests (xUnit + NSubstitute)
 - `tests/EasyTrading.Aster.UnitTests/` — Aster unit + integration tests (xUnit)
 - `tests/EasyTrading.Dydx.UnitTests/` — dYdX unit + integration tests (xUnit)
@@ -61,7 +61,7 @@ dotnet run --project samples/EasyTrading.Samples.Console
 ## Release flow
 
 ```powershell
-git tag v1.2.5
+git tag v1.2.6
 git push --tags
 ```
 

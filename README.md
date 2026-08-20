@@ -17,9 +17,9 @@ Battle-tested in production as the exchange layer of the [EasyTrading.pw](https:
 
 | Exchange    | Package                              | REST | WebSocket | Signing | Latest                              |
 |-------------|--------------------------------------|:----:|:---------:|:-------:|:-----------------------------------:|
-| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅  |    ✅     |   ✅    | `1.2.5`                             |
-| Aster       | `EasyTrading.Aster`                  |  ✅  |    ✅     |   ✅    | `1.2.5`                             |
-| dYdX v4     | `EasyTrading.Dydx`                   |  ✅  |    ✅     |   ✅    | `1.2.5`                             |
+| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅  |    ✅     |   ✅    | `1.2.6`                             |
+| Aster       | `EasyTrading.Aster`                  |  ✅  |    ✅     |   ✅    | `1.2.6`                             |
+| dYdX v4     | `EasyTrading.Dydx`                   |  ✅  |    ✅     |   ✅    | `1.2.6`                             |
 
 Coverage summary:
 
@@ -39,14 +39,15 @@ Coverage summary:
   → REST broadcast). End-to-end verified on testnet: `Testnet_PlaceLimit_and_Cancel` places
   a far-from-market post-only BTC-USD buy from a freshly-faucet-funded wallet and cancels
   it; the chain accepts both. `dydx-mainnet-1` and `dydx-testnet-4` chain IDs supported
-  out of the box.
+  out of the box. IOC and reduce-only execution uses validator-height-based SHORT_TERM
+  orders; invalid reduce-only/FOK combinations fail closed before broadcast.
 
-**Tests:** 156 unit tests (111 HL + 25 dYdX + 20 Aster) + 16 live read-only integration
+**Tests:** 202 unit tests (131 HL + 45 dYdX + 26 Aster) + 16 live read-only integration
 tests + a gated live-mainnet audit harness (`HyperLiquidMainnetFullAuditTests`) that
 exercises 58 sub-checks against a real master / agent wallet — every read method, every
 order type (Limit GTC / ALO / IOC / FOK + Stop-Market / Stop-Limit / Take-Profit), Modify,
 batch operations, CancelAll, ScheduleCancel, Vaults / Staking reads, and 9 stream
-channels. All green at 1.2.5.
+channels. All green at 1.2.6.
 
 The 21-fact `HlSignatureRecoveryRegressionTests` suite signs every HL action type with a
 known key and verifies ECDSA recovery returns that key's address — the exact firewall that
@@ -144,9 +145,9 @@ Methods are grouped by entity. Everything about orders is on `Orders`; everythin
 
 ## Roadmap
 
-- [x] HyperLiquid — REST + WebSocket + EIP-712 signing + hardening → `1.2.5`
-- [x] Aster — REST + WebSocket + EIP-712 signing → `1.2.5`
-- [x] dYdX v4 — Indexer REST + WebSocket + Cosmos SDK signing (BIP-39 → BIP-32 → secp256k1 → bech32, full proto stack, REST broadcast), end-to-end verified on testnet → `1.2.5`
+- [x] HyperLiquid — REST + WebSocket + EIP-712 signing + hardening → `1.2.6`
+- [x] Aster — REST + WebSocket + EIP-712 signing → `1.2.6`
+- [x] dYdX v4 — Indexer REST + WebSocket + Cosmos SDK signing (BIP-39 → BIP-32 → secp256k1 → bech32, full proto stack, REST broadcast), end-to-end verified on testnet → `1.2.6`
 
 ## Used in production — the EasyTrading.pw ecosystem
 

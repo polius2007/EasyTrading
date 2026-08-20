@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.6] — dYdX short-term IOC order fix
+
+No public API changes; all packages ship in lockstep.
+
+### Fixed
+
+- **dYdX IOC orders now use the chain's SHORT_TERM protocol** — the client queries
+  the latest validator block, sets `order_flags=0`, and uses `good_til_block`
+  with a 10-block lifetime. It no longer emits the invalid LONG_TERM + IOC
+  combination rejected by the dYdX chain.
+- **Reduce-only orders fail closed unless they are IOC** as required by dYdX v4.
+  Unsupported FOK is rejected explicitly instead of being silently weakened to IOC.
+- A caller-supplied non-numeric dYdX `client_id` is rejected instead of being
+  silently replaced by a random value; generated IDs are always non-zero.
+
+### Tests
+
+- Added signed `TxRaw` regression coverage that captures the broadcast request,
+  decodes `MsgPlaceOrder`, and verifies exact short-term/long-term protobuf fields.
+- Added validator-height parsing, malformed-response, reduce-only, FOK, and
+  client-ID fail-closed coverage. Release suite: 202 unit tests
+  (131 HyperLiquid + 26 Aster + 45 dYdX), all green.
+
 ## [1.2.5] — Builder-fee approval page + ecosystem docs
 
 No API changes; all packages ship in lockstep.

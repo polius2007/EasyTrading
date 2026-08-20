@@ -98,10 +98,42 @@ internal sealed class Orders(
         TimeInForce tif = TimeInForce.Gtc, bool reduceOnly = false,
         string? clientOrderId = null, CancellationToken ct = default)
     {
+        if (tif == TimeInForce.Fok)
+            throw new InvalidOrderException(
+                "dYdX v4 does not expose strict fill-or-kill semantics; use IOC or GTC explicitly.");
+        if (reduceOnly && tif != TimeInForce.Ioc)
+            throw new InvalidOrderException(
+                "dYdX v4 reduce-only orders must use IOC short-term execution.");
+
         var (creds, builder, cosmosClient) = RequireWriteContext();
         var info = await markets.GetAsync(symbol, ct).ConfigureAwait(false);
 
-        var msg = BuildPlaceOrderMsg(creds, info, side, price, size, tif, reduceOnly, clientOrderId);
+        uint? goodTilBlock = null;
+        if (tif == TimeInForce.Ioc)
+        {
+            var latestBlock = await cosmosClient.GetLatestBlockHeightAsync(ct).ConfigureAwait(false);
+            try
+            {
+                goodTilBlock = checked(latestBlock + ShortTermBlockWindow);
+            }
+            catch (OverflowException ex)
+            {
+                throw new ExchangeApiException(
+                    "dYdX validator block height cannot be represented by a short-term order.",
+                    innerException: ex);
+            }
+        }
+
+        var msg = BuildPlaceOrderMsg(
+            creds,
+            info,
+            side,
+            price,
+            size,
+            tif,
+            reduceOnly,
+            clientOrderId,
+            goodTilBlock);
 
         var (accNum, sequence) = await cosmosClient.GetAccountAsync(creds.Address, ct).ConfigureAwait(false);
         var txBytes = builder.BuildAndSign(
@@ -224,44 +256,57 @@ internal sealed class Orders(
     // ─── helpers ─────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// dYdX <c>order_flags</c> values. <c>0</c> is the SHORT_TERM placeholder; <c>64</c> = LONG_TERM
-    /// (good_til_block_time-based). LONG_TERM is what we use for resting orders — it doesn't need
-    /// the current block height the way SHORT_TERM does.
+    /// dYdX <c>order_flags</c> values for block-based short-term and time-based long-term orders.
     /// </summary>
+    private const uint OrderFlagsShortTerm = 0;
     private const uint OrderFlagsLongTerm = 64;
+    private const uint ShortTermBlockWindow = 10;
 
-    /// <summary>Build a fully-populated <see cref="MsgPlaceOrder"/> for the LONG_TERM order flow.</summary>
+    /// <summary>Build a fully-populated short-term or long-term place-order message.</summary>
     private static MsgPlaceOrder BuildPlaceOrderMsg(
         DydxCredentials creds, MarketInfo market, OrderSide side, decimal price, decimal size,
-        TimeInForce tif, bool reduceOnly, string? clientOrderIdStr)
+        TimeInForce tif, bool reduceOnly, string? clientOrderIdStr, uint? goodTilBlock)
     {
         // dYdX client_id is uint32. Accept the caller's value if they supplied one, otherwise
         // synthesise from a random 32-bit seed seeded by time + size + price so it's stable
         // within a single call but unlikely to collide across concurrent orders.
         uint clientId;
-        if (clientOrderIdStr is not null && uint.TryParse(clientOrderIdStr, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed))
-            clientId = parsed;
-        else
-            clientId = (uint)Random.Shared.NextInt64(0, uint.MaxValue);
+        if (clientOrderIdStr is null)
+        {
+            clientId = (uint)Random.Shared.NextInt64(1, (long)uint.MaxValue + 1);
+        }
+        else if (!uint.TryParse(
+            clientOrderIdStr,
+            NumberStyles.None,
+            CultureInfo.InvariantCulture,
+            out clientId))
+        {
+            throw new InvalidOrderException(
+                $"dYdX client_id must be a numeric uint32 value; '{clientOrderIdStr}' is invalid.");
+        }
 
         var orderId = new ProtoOrderId
         {
             SubaccountId = new SubaccountId { Owner = creds.Address, Number = (uint)creds.SubaccountNumber },
             ClientId     = clientId,
-            OrderFlags   = OrderFlagsLongTerm,
+            OrderFlags   = goodTilBlock.HasValue ? OrderFlagsShortTerm : OrderFlagsLongTerm,
             ClobPairId   = market.ClobPairId,
         };
 
         var order = new ProtoOrder
         {
-            OrderId          = orderId,
-            Side             = side == OrderSide.Buy ? ProtoOrder.Types.Side.Buy : ProtoOrder.Types.Side.Sell,
-            Quantums         = market.ToQuantums(size),
-            Subticks         = market.ToSubticks(price),
-            GoodTilBlockTime = (uint)DateTimeOffset.UtcNow.AddMinutes(2).ToUnixTimeSeconds(),
-            TimeInForce      = MapTif(tif),
-            ReduceOnly       = reduceOnly,
+            OrderId     = orderId,
+            Side        = side == OrderSide.Buy ? ProtoOrder.Types.Side.Buy : ProtoOrder.Types.Side.Sell,
+            Quantums    = market.ToQuantums(size),
+            Subticks    = market.ToSubticks(price),
+            TimeInForce = MapTif(tif),
+            ReduceOnly  = reduceOnly,
         };
+
+        if (goodTilBlock.HasValue)
+            order.GoodTilBlock = goodTilBlock.Value;
+        else
+            order.GoodTilBlockTime = (uint)DateTimeOffset.UtcNow.AddMinutes(2).ToUnixTimeSeconds();
 
         return new MsgPlaceOrder { Order = order };
     }
@@ -269,11 +314,8 @@ internal sealed class Orders(
     private static ProtoOrder.Types.TimeInForce MapTif(TimeInForce tif) => tif switch
     {
         TimeInForce.Ioc => ProtoOrder.Types.TimeInForce.Ioc,
-        // dYdX deprecated their dedicated FILL_OR_KILL enum value; IOC is the closest
-        // remaining semantics (fill what you can, cancel the rest). Callers that need a
-        // strict all-or-nothing fill should use SHORT_TERM with explicit fill_or_kill flags
-        // strict all-or-nothing fill via SHORT_TERM order_flags is on the follow-up roadmap.
-        TimeInForce.Fok => ProtoOrder.Types.TimeInForce.Ioc,
+        TimeInForce.Fok => throw new InvalidOrderException(
+            "dYdX v4 does not expose strict fill-or-kill semantics."),
         TimeInForce.Alo => ProtoOrder.Types.TimeInForce.PostOnly,
         _               => ProtoOrder.Types.TimeInForce.Unspecified,  // GTC == default for LONG_TERM
     };
