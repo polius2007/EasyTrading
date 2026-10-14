@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.7] — Builder approval and AI integration guides
+
+No public API changes; all packages ship in lockstep. Default builder address and
+0.005% fee are unchanged.
+
+### Fixed
+
+- Builder fees are automatically approved with the configured master signing key
+  (or a matching `MasterPrivateKey`) when the user's existing approval is insufficient.
+- Agent/API keys are recognized by their derived address even without `AgentName`.
+  The SDK skips an invalid agent-signed approval and logs the existing browser
+  confirmation link while allowing orders to continue without builder routing.
+- Agent-only clients check approval again on the next order, including clients
+  using the shared approval store, so browser confirmation no longer waits for
+  the automatic-approval failure cooldown.
+
+### Added
+
+- AI quickstart, intent-to-API map, standalone `llms-full.txt`, and a compiled
+  read-only testnet sample. Both LLM indexes are published with the API docs.
+- Updated assistant rules and fixed case-sensitive credential argument names in
+  onboarding snippets.
+
+### Tests
+
+- Regression coverage for master auto-approval, agent-only browser confirmation,
+  existing approvals, explicit opt-out, and an invalid optional master key with
+  both legacy and shared stores. Release suite: 213 tests passed
+  (142 HyperLiquid + 26 Aster + 45 dYdX); live trading flags were disabled.
+- Both .NET 8 and .NET 9 builds passed with zero warnings. The compiled read-only
+  sample returned a BTC testnet mid price without credentials.
+
 ## [1.2.6] — dYdX short-term IOC order fix
 
 No public API changes; all packages ship in lockstep.

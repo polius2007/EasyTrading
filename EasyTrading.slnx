@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/samples/">
+    <Project Path="samples/EasyTrading.Samples.Agent/EasyTrading.Samples.Agent.csproj" />
     <Project Path="samples/EasyTrading.Samples.Console/EasyTrading.Samples.Console.csproj" />
   </Folder>
   <Folder Name="/src/">

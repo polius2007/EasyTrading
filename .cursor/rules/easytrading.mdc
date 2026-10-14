@@ -5,16 +5,16 @@ alwaysApply: true
 
 # EasyTrading
 
-Multi-DEX trading client for .NET. HyperLiquid, Aster, and dYdX v4 are all live on NuGet at `1.2.6`. See `AGENTS.md` for full guidance.
+Multi-DEX trading client for .NET. HyperLiquid, Aster, and dYdX v4 are all live on NuGet at `1.2.7`. See `AGENTS.md` for full guidance.
 
 ## Status
 
-- **HyperLiquid `1.2.6`** — stable. EIP-712 signed reads + writes + WebSocket. Pre-flight order
+- **HyperLiquid `1.2.7`** — stable. EIP-712 signed reads + writes + WebSocket. Pre-flight order
   validation, REST retry policy (backoff + jitter + Retry-After), WS gap recovery on user
   streams, automatic builder-fee routing.
-- **Aster `1.2.6`** — stable. Same surface, EIP-712 `AsterSignTransaction` signing. WebSocket:
+- **Aster `1.2.7`** — stable. Same surface, EIP-712 `AsterSignTransaction` signing. WebSocket:
   Binance-style multiplex with listenKey-bound user streams + 30-min keepalive.
-- **dYdX v4 `1.2.6`** — stable. Indexer REST + public WS + signed Indexer reads + full Cosmos
+- **dYdX v4 `1.2.7`** — stable. Indexer REST + public WS + signed Indexer reads + full Cosmos
   SDK transaction signing (BIP-39 → BIP-32 → secp256k1 → bech32 → protobuf TxRaw → REST
   broadcast). End-to-end verified on testnet (`Testnet_PlaceLimit_and_Cancel` places + cancels
   a far-from-market BTC-USD post-only buy from a faucet-funded wallet; chain accepts both).
@@ -33,7 +33,7 @@ Multi-DEX trading client for .NET. HyperLiquid, Aster, and dYdX v4 are all live 
 
 - Prefer agent wallets over the master private key — call `IAccount.ApproveAgentAsync(...)` once, then trade with the agent's key
 - Network: `HyperLiquidNetwork.Mainnet` or `.Testnet`
-- Builder fee is automatic; users opt out by setting `options.BuilderFee` to a zero rate or routing to their own address
+- Builder fees auto-approve with a matching master key. Agent-only wallets confirm once in the browser; see `docs/ai-quickstart.md`. Users may explicitly opt out with a zero `FeeRate`.
 
 ## DI registration
 
@@ -42,7 +42,7 @@ services.AddEasyTrading()
         .AddHyperLiquid(o =>
         {
             o.Network     = HyperLiquidNetwork.Mainnet;
-            o.Credentials = new HyperLiquidCredentials("0xMaster", privKey, agentName: "my-bot");
+            o.Credentials = new HyperLiquidCredentials("0xMaster", privKey, AgentName: "my-bot");
         });
 ```
 

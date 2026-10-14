@@ -4,9 +4,9 @@ This repository builds **EasyTrading**, a multi-DEX trading client for .NET. See
 
 ## Status
 
-- **HyperLiquid `1.2.6`** — stable. Read / write (EIP-712-signed) / WebSocket all live against mainnet, with pre-flight order validation, REST retry policy, and WS gap recovery for user streams.
-- **Aster `1.2.6`** — stable. EIP-712 `AsterSignTransaction` signing, full REST + WebSocket surface against Aster Finance mainnet.
-- **dYdX v4 `1.2.6`** — stable. Indexer REST + WebSocket + signed Indexer reads + full Cosmos SDK transaction signing (BIP-39 → BIP-32 → secp256k1 → bech32 → protobuf TxRaw → REST broadcast), end-to-end verified on testnet (PlaceLimit + Cancel of a far-from-market BTC-USD post-only buy from a faucet-funded wallet; chain accepts both).
+- **HyperLiquid `1.2.7`** — stable. Read / write (EIP-712-signed) / WebSocket all live against mainnet, with pre-flight order validation, REST retry policy, and WS gap recovery for user streams.
+- **Aster `1.2.7`** — stable. EIP-712 `AsterSignTransaction` signing, full REST + WebSocket surface against Aster Finance mainnet.
+- **dYdX v4 `1.2.7`** — stable. Indexer REST + WebSocket + signed Indexer reads + full Cosmos SDK transaction signing (BIP-39 → BIP-32 → secp256k1 → bech32 → protobuf TxRaw → REST broadcast), end-to-end verified on testnet (PlaceLimit + Cancel of a far-from-market BTC-USD post-only buy from a faucet-funded wallet; chain accepts both).
 
 ## Hard rules (apply always)
 
@@ -40,7 +40,7 @@ await foreach (var trade in ex.Streams.TradesAsync("BTC", ct))
 
 Prefer `IHyperLiquidExchange` injection when HL-specific features (`Vaults`, `Staking`) are needed; use `IExchangeClient` for cross-DEX strategy code.
 
-Builder-fee routing is automatic — don't suggest manually approving or attaching builder fields; the library handles it.
+Builder fees auto-approve only with a matching master key. Agent-only wallets confirm once at https://polius2007.github.io/EasyTrading/approve.html; the next order checks the approval. See docs/ai-quickstart.md and docs/ai-api-map.md before generating code.
 
 ## Repo conventions
 

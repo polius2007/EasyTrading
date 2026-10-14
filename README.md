@@ -17,9 +17,9 @@ Battle-tested in production as the exchange layer of the [EasyTrading.pw](https:
 
 | Exchange    | Package                              | REST | WebSocket | Signing | Latest                              |
 |-------------|--------------------------------------|:----:|:---------:|:-------:|:-----------------------------------:|
-| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅  |    ✅     |   ✅    | `1.2.6`                             |
-| Aster       | `EasyTrading.Aster`                  |  ✅  |    ✅     |   ✅    | `1.2.6`                             |
-| dYdX v4     | `EasyTrading.Dydx`                   |  ✅  |    ✅     |   ✅    | `1.2.6`                             |
+| HyperLiquid | `EasyTrading.HyperLiquid`            |  ✅  |    ✅     |   ✅    | `1.2.7`                             |
+| Aster       | `EasyTrading.Aster`                  |  ✅  |    ✅     |   ✅    | `1.2.7`                             |
+| dYdX v4     | `EasyTrading.Dydx`                   |  ✅  |    ✅     |   ✅    | `1.2.7`                             |
 
 Coverage summary:
 
@@ -47,7 +47,7 @@ tests + a gated live-mainnet audit harness (`HyperLiquidMainnetFullAuditTests`) 
 exercises 58 sub-checks against a real master / agent wallet — every read method, every
 order type (Limit GTC / ALO / IOC / FOK + Stop-Market / Stop-Limit / Take-Profit), Modify,
 batch operations, CancelAll, ScheduleCancel, Vaults / Staking reads, and 9 stream
-channels. All green at 1.2.6.
+channels. All green at 1.2.7.
 
 The 21-fact `HlSignatureRecoveryRegressionTests` suite signs every HL action type with a
 known key and verifies ECDSA recovery returns that key's address — the exact firewall that
@@ -81,9 +81,9 @@ host.Services
     {
         o.Network = HyperLiquidNetwork.Mainnet;
         o.Credentials = new HyperLiquidCredentials(
-            masterAddress: "0xYourMasterAddress",
-            privateKey:    Environment.GetEnvironmentVariable("HL_AGENT_KEY")!,
-            agentName:     "easy-bot");
+            MasterAddress: "0xYourMasterAddress",
+            PrivateKey:    Environment.GetEnvironmentVariable("HL_AGENT_KEY")!,
+            AgentName:     "easy-bot");
     })
     .AddAster(o =>
     {
@@ -145,9 +145,9 @@ Methods are grouped by entity. Everything about orders is on `Orders`; everythin
 
 ## Roadmap
 
-- [x] HyperLiquid — REST + WebSocket + EIP-712 signing + hardening → `1.2.6`
-- [x] Aster — REST + WebSocket + EIP-712 signing → `1.2.6`
-- [x] dYdX v4 — Indexer REST + WebSocket + Cosmos SDK signing (BIP-39 → BIP-32 → secp256k1 → bech32, full proto stack, REST broadcast), end-to-end verified on testnet → `1.2.6`
+- [x] HyperLiquid — REST + WebSocket + EIP-712 signing + hardening → `1.2.7`
+- [x] Aster — REST + WebSocket + EIP-712 signing → `1.2.7`
+- [x] dYdX v4 — Indexer REST + WebSocket + Cosmos SDK signing (BIP-39 → BIP-32 → secp256k1 → bech32, full proto stack, REST broadcast), end-to-end verified on testnet → `1.2.7`
 
 ## Used in production — the EasyTrading.pw ecosystem
 
@@ -189,11 +189,16 @@ The repo ships first-class instructions so IDE assistants generate correct code 
 
 These files travel with the source; any fork or clone inherits the same guidance.
 
+Start with [AI quickstart](docs/ai-quickstart.md), use the [intent-to-API map](docs/ai-api-map.md),
+or read [llms-full.txt](llms-full.txt) for standalone context. The
+[compiled agent sample](samples/EasyTrading.Samples.Agent) reads testnet market data
+without credentials or placing orders.
+
 ## Disclaimer
 
 This software is provided "as is", without warranty of any kind. Trading derivatives carries significant financial risk; use at your own responsibility. The authors are not affiliated with HyperLiquid, Aster, dYdX, or any other exchange.
 
-The HyperLiquid client attaches a 0.5 bps (0.005%) builder fee to every order by default — this funds continued development. The fee is well below typical taker rates and visible on-chain as a separate field on each order action. The library calls `approveBuilderFee` once per account on the first order; nothing else is required from the consumer. To route fees to your own address set `HyperLiquidClientOptions.BuilderFee`; to opt out entirely, set its `FeeRate` to `0m`.
+The HyperLiquid client attaches a 0.5 bps (0.005%) builder fee to every order by default — this funds continued development. The fee is well below typical taker rates and visible on-chain as a separate field on each order action. When the configured signing key belongs to the master account (or a matching `MasterPrivateKey` is supplied), the library automatically calls `approveBuilderFee` on the first order if needed. Existing approvals are reused. With only an agent/API key, the library skips the invalid automatic approval attempt and logs the one-time browser approval link. To route fees to your own address set `HyperLiquidClientOptions.BuilderFee`; to opt out entirely, set its `FeeRate` to `0m`.
 
 > **Note on agent wallets and builder approval.** HyperLiquid requires `approveBuilderFee`
 > to be signed by the master wallet, not an agent wallet. If you initialise the client with
@@ -212,7 +217,9 @@ The HyperLiquid client attaches a 0.5 bps (0.005%) builder fee to every order by
 > account-type button on the order form).
 >
 > Until approval is in place, orders are placed without builder routing (a warning is logged);
-> placement itself is not blocked.
+> placement itself is not blocked. For agent/API wallets without a master signing key,
+> approval is checked again on the next order, including clients using a shared approval store.
+> A failed automatic master-wallet approval or network check may still use the 30-minute retry cooldown.
 
 ## License
 

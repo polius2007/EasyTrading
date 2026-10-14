@@ -8,8 +8,8 @@ namespace EasyTrading.HyperLiquid;
 /// <param name="MasterPrivateKey">
 /// Optional master account private key, used ONLY for user-signed actions that HyperLiquid
 /// requires to be signed by the master wallet (currently: <c>approveBuilderFee</c>). If
-/// <c>null</c>, the regular <see cref="PrivateKey"/> is used as fallback (which only works
-/// if it IS the master key — typical for testnet or non-agent setups). On mainnet with an
+/// <c>null</c>, the regular <see cref="PrivateKey"/> is used only if its derived address
+/// matches <see cref="MasterAddress"/>. Agent keys do not submit approval requests. With an
 /// agent wallet, either set this to your master key for one-time builder approval, or
 /// approve the builder once with your master wallet at
 /// <c>https://polius2007.github.io/EasyTrading/approve.html</c> and leave this <c>null</c>

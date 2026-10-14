@@ -6,9 +6,9 @@ This file is read automatically by Claude Code when working in this repository. 
 
 - `src/EasyTrading.Abstractions/` — cross-DEX interfaces and models, no runtime deps
 - `src/EasyTrading.Core/` — shared infrastructure (HTTP, WebSocket, signing helpers)
-- `src/EasyTrading.HyperLiquid/` — HyperLiquid client (REST + WebSocket + EIP-712 signing) — `1.2.6` on NuGet
-- `src/EasyTrading.Aster/` — Aster client (REST + WebSocket + EIP-712 signing) — `1.2.6` on NuGet
-- `src/EasyTrading.Dydx/` — dYdX v4 client (Indexer REST + WebSocket + signed Indexer reads + full Cosmos SDK transaction signing: BIP-39 → secp256k1 → bech32 → protobuf TxRaw → REST broadcast) — `1.2.6` on NuGet
+- `src/EasyTrading.HyperLiquid/` — HyperLiquid client (REST + WebSocket + EIP-712 signing) — `1.2.7` on NuGet
+- `src/EasyTrading.Aster/` — Aster client (REST + WebSocket + EIP-712 signing) — `1.2.7` on NuGet
+- `src/EasyTrading.Dydx/` — dYdX v4 client (Indexer REST + WebSocket + signed Indexer reads + full Cosmos SDK transaction signing: BIP-39 → secp256k1 → bech32 → protobuf TxRaw → REST broadcast) — `1.2.7` on NuGet
 - `tests/EasyTrading.HyperLiquid.UnitTests/` — HL unit + integration tests (xUnit + NSubstitute)
 - `tests/EasyTrading.Aster.UnitTests/` — Aster unit + integration tests (xUnit)
 - `tests/EasyTrading.Dydx.UnitTests/` — dYdX unit + integration tests (xUnit)
@@ -61,7 +61,7 @@ dotnet run --project samples/EasyTrading.Samples.Console
 ## Release flow
 
 ```powershell
-git tag v1.2.6
+git tag v1.2.7
 git push --tags
 ```
 
@@ -89,7 +89,7 @@ A release is not done when the tag is pushed — verify all of:
 
 When making changes, the bar is:
 - `dotnet build EasyTrading.slnx` — clean (0 warnings, 0 errors, net8.0 + net9.0)
-- `dotnet test EasyTrading.slnx` — all unit tests green (currently 189: 131 HL + 26 Aster + 32 dYdX). HL includes a 21-fact `HlSignatureRecoveryRegressionTests` that signs every L1 / user-signed action variant and ECDSA-recovers to verify the recovered address matches the signing key — caught the 1.2.1 / 1.2.2 wire-format bug classes and now guards against future regressions. Multi-tenant tests: `HyperLiquidClientFactoryTests` + `HyperLiquidBuilderFeeApprovalStoreTests`.
+- `dotnet test EasyTrading.slnx` — all unit tests green (currently 213: 142 HL + 26 Aster + 45 dYdX). HL includes a 21-fact `HlSignatureRecoveryRegressionTests` that signs every L1 / user-signed action variant and ECDSA-recovers to verify the recovered address matches the signing key — caught the 1.2.1 / 1.2.2 wire-format bug classes and now guards against future regressions. Multi-tenant tests: `HyperLiquidClientFactoryTests` + `HyperLiquidBuilderFeeApprovalStoreTests`.
 - With `EASYTRADING_INTEGRATION=1`, integration tests also green (currently 16: 5 HL + 5 Aster + 6 dYdX, all live mainnet/testnet reads)
 - `DYDX_TESTNET_MNEMONIC` env var unlocks the testnet PlaceLimit + Cancel verification path (also gated by `EASYTRADING_INTEGRATION=1`)
 - `EASYTRADING_BOOTSTRAP_FAUCET=1` + `EASYTRADING_INTEGRATION=1` enables `TestnetBootstrap` which generates a fresh BIP-39 mnemonic, derives the dydx1… address, and calls the public faucet to seed it with USDC
@@ -108,6 +108,6 @@ If a build error is an analyzer warning (CA*/IDE*), the fix is usually to either
 
 - Brand: **EasyTrading.pw**
 - License: MIT
-- A small default builder fee is attached to every HyperLiquid order action. Defaults live in `EasyTrading.HyperLiquid.Infrastructure.HlBuilderDefaults` (internal); users override per-client via `HyperLiquidClientOptions.BuilderFee` or per-order via `OrderRequest.BuilderFeeOverride`. The library auto-calls `approveBuilderFee` on first order per trader's account (cached in-process); no manual setup required by consumers.
+- A small default builder fee is attached to every HyperLiquid order action. Defaults live in `EasyTrading.HyperLiquid.Infrastructure.HlBuilderDefaults` (internal); users override per-client via `HyperLiquidClientOptions.BuilderFee` or per-order via `OrderRequest.BuilderFeeOverride`. The library auto-approves builder fees when a matching master signing key is available. Agent-only users confirm once at the existing approval page; subsequent orders check that approval automatically.
 
 For the full coding patterns and recommended snippets, see [AGENTS.md](AGENTS.md).

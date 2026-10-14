@@ -166,8 +166,10 @@ public sealed class HlBuilderApprovalFallbackTests
 
     // ─── Test 4: MasterPrivateKey supplied → approve signed by master key ──
 
-    [Fact]
-    public async Task MasterKeySupplied_ApproveSignedByMasterNotAgent()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MasterKeySupplied_ApproveSignedByMasterNotAgent(bool sharedStore)
     {
         var ctx = NewContext(useSeparateMaster: true);
         ctx.Handler.OnExchangePost = (action, body) =>
@@ -181,7 +183,13 @@ public sealed class HlBuilderApprovalFallbackTests
             };
         };
 
-        await using var client = new HyperLiquidClient(ctx.Http, ctx.Options);
+        using var store = new HyperLiquidBuilderFeeApprovalStore();
+        using var catalog = new HyperLiquidMetadataCatalog(ctx.Http);
+        if (sharedStore)
+            await catalog.WarmUpAsync(new HyperLiquidMetadataScope(HyperLiquidNetwork.Testnet));
+        await using var client = sharedStore
+            ? new HyperLiquidClient(ctx.Http, catalog, store, ctx.Options)
+            : new HyperLiquidClient(ctx.Http, ctx.Options);
         await client.Orders.PlaceLimitAsync("BTC", OrderSide.Buy, 50_000m, 0.001m, TimeInForce.Alo);
 
         var approveCall = ctx.Handler.Calls.Single(c => c.Path.EndsWith("/exchange", StringComparison.Ordinal)
@@ -212,6 +220,154 @@ public sealed class HlBuilderApprovalFallbackTests
         // And the order itself must still be signed by the agent key (cheap proxy: a second order
         // would re-sign with the same key; we just sanity-check it went through).
         Assert.NotEmpty(orderCall.Body);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MasterWallet_AutoApprovesOnce_AndAttachesFee(bool sharedStore)
+    {
+        var ctx = NewContext();
+        ctx.Handler.OnExchangePost = (action, _) =>
+            action.GetProperty("type").GetString() == "approveBuilderFee"
+                ? ExchangeOk()
+                : OrderRestingOk(10L);
+        using var store = new HyperLiquidBuilderFeeApprovalStore();
+        using var catalog = new HyperLiquidMetadataCatalog(ctx.Http);
+        if (sharedStore)
+            await catalog.WarmUpAsync(new HyperLiquidMetadataScope(HyperLiquidNetwork.Testnet));
+        await using var client = sharedStore
+            ? new HyperLiquidClient(ctx.Http, catalog, store, ctx.Options)
+            : new HyperLiquidClient(ctx.Http, ctx.Options);
+
+        await client.Orders.PlaceLimitAsync("BTC", OrderSide.Buy, 50_000m, 0.001m, TimeInForce.Alo);
+        await client.Orders.PlaceLimitAsync("BTC", OrderSide.Buy, 50_000m, 0.001m, TimeInForce.Alo);
+
+        var approval = Assert.Single(ctx.Handler.Calls, c => c.ActionType == "approveBuilderFee");
+        using var approvalBody = JsonDocument.Parse(approval.Body);
+        var action = approvalBody.RootElement.GetProperty("action");
+        var signature = approvalBody.RootElement.GetProperty("signature");
+        Assert.Equal("0.005%", action.GetProperty("maxFeeRate").GetString());
+        Assert.True(SignatureMatches(action, "ApproveBuilderFee", ctx.AgentPrivateKey,
+            signature.GetProperty("r").GetString()!, signature.GetProperty("s").GetString()!,
+            signature.GetProperty("v").GetInt32()));
+        Assert.Single(ctx.Handler.Calls, c => c.ActionType == "maxBuilderFee");
+        foreach (var order in ctx.Handler.Calls.Where(c => c.ActionType == "order"))
+            AssertBuilderFee(order);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AgentOnly_SkipsInvalidApproval_AndPicksUpBrowserApprovalOnNextOrder(bool sharedStore)
+    {
+        var ctx = NewContext(useSeparateMaster: true);
+        // Detect by derived key address, not the optional AgentName label.
+        ctx.Options.Credentials = ctx.Options.Credentials! with { MasterPrivateKey = null, AgentName = null };
+        var approved = false;
+        var infoHandler = ctx.Handler.OnInfoPost!;
+        ctx.Handler.OnInfoPost = (type, doc) => type == "maxBuilderFee"
+            ? OkJson(approved ? "5" : "0") : infoHandler(type, doc);
+        ctx.Handler.OnExchangePost = (_, _) => OrderRestingOk(11L);
+        var logger = new CapturingLogger<HyperLiquidClient>();
+        using var store = new HyperLiquidBuilderFeeApprovalStore();
+        using var catalog = new HyperLiquidMetadataCatalog(ctx.Http);
+        if (sharedStore)
+            await catalog.WarmUpAsync(new HyperLiquidMetadataScope(HyperLiquidNetwork.Testnet));
+        await using var client = sharedStore
+            ? new HyperLiquidClient(ctx.Http, catalog, store, ctx.Options, logger)
+            : new HyperLiquidClient(ctx.Http, ctx.Options, logger);
+
+        await client.Orders.PlaceLimitAsync("BTC", OrderSide.Buy, 50_000m, 0.001m, TimeInForce.Alo);
+        var first = Assert.Single(ctx.Handler.Calls, c => c.ActionType == "order");
+        Assert.False(first.HasField("builder"));
+        Assert.DoesNotContain(ctx.Handler.Calls, c => c.ActionType == "approveBuilderFee");
+        Assert.Contains(logger.Entries, e => e.Level == LogLevel.Warning
+            && e.Message.Contains(ctx.MasterAddress, StringComparison.OrdinalIgnoreCase)
+            && e.Message.Contains("polius2007.github.io/EasyTrading/approve.html", StringComparison.Ordinal));
+
+        approved = true; // The account owner confirms in the browser between orders.
+        await client.Orders.PlaceLimitAsync("BTC", OrderSide.Buy, 50_000m, 0.001m, TimeInForce.Alo);
+        AssertBuilderFee(ctx.Handler.Calls.Last(c => c.ActionType == "order"));
+        Assert.Equal(2, ctx.Handler.Calls.Count(c => c.ActionType == "maxBuilderFee"));
+        Assert.DoesNotContain(ctx.Handler.Calls, c => c.ActionType == "approveBuilderFee");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AgentOnly_ExistingApproval_AttachesFeeWithoutMasterKey(bool sharedStore)
+    {
+        var ctx = NewContext(useSeparateMaster: true);
+        ctx.Options.Credentials = ctx.Options.Credentials! with { MasterPrivateKey = null };
+        var infoHandler = ctx.Handler.OnInfoPost!;
+        ctx.Handler.OnInfoPost = (type, doc) => type == "maxBuilderFee" ? OkJson("5") : infoHandler(type, doc);
+        ctx.Handler.OnExchangePost = (_, _) => OrderRestingOk(12L);
+        using var store = new HyperLiquidBuilderFeeApprovalStore();
+        using var catalog = new HyperLiquidMetadataCatalog(ctx.Http);
+        if (sharedStore)
+            await catalog.WarmUpAsync(new HyperLiquidMetadataScope(HyperLiquidNetwork.Testnet));
+        await using var client = sharedStore
+            ? new HyperLiquidClient(ctx.Http, catalog, store, ctx.Options)
+            : new HyperLiquidClient(ctx.Http, ctx.Options);
+
+        await client.Orders.PlaceLimitAsync("BTC", OrderSide.Buy, 50_000m, 0.001m, TimeInForce.Alo);
+
+        AssertBuilderFee(Assert.Single(ctx.Handler.Calls, c => c.ActionType == "order"));
+        Assert.DoesNotContain(ctx.Handler.Calls, c => c.ActionType == "approveBuilderFee");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ZeroFee_DoesNotCheckOrApproveBuilder(bool sharedStore)
+    {
+        var ctx = NewContext();
+        ctx.Options.BuilderFee = new BuilderFee("0x000000000000000000000000000000000000beef", 0m);
+        ctx.Handler.OnExchangePost = (_, _) => OrderRestingOk(13L);
+        using var store = new HyperLiquidBuilderFeeApprovalStore();
+        using var catalog = new HyperLiquidMetadataCatalog(ctx.Http);
+        if (sharedStore)
+            await catalog.WarmUpAsync(new HyperLiquidMetadataScope(HyperLiquidNetwork.Testnet));
+        await using var client = sharedStore
+            ? new HyperLiquidClient(ctx.Http, catalog, store, ctx.Options)
+            : new HyperLiquidClient(ctx.Http, ctx.Options);
+
+        await client.Orders.PlaceLimitAsync("BTC", OrderSide.Buy, 50_000m, 0.001m, TimeInForce.Alo);
+
+        Assert.False(Assert.Single(ctx.Handler.Calls, c => c.ActionType == "order").HasField("builder"));
+        Assert.DoesNotContain(ctx.Handler.Calls, c => c.ActionType is "approveBuilderFee" or "maxBuilderFee");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task InvalidOptionalMasterKey_DoesNotPreventAgentTrading(bool sharedStore)
+    {
+        var ctx = NewContext(useSeparateMaster: true);
+        ctx.Options.Credentials = ctx.Options.Credentials! with { MasterPrivateKey = "not-a-private-key" };
+        ctx.Handler.OnExchangePost = (_, _) => OrderRestingOk(14L);
+        using var store = new HyperLiquidBuilderFeeApprovalStore();
+        using var catalog = new HyperLiquidMetadataCatalog(ctx.Http);
+        if (sharedStore)
+            await catalog.WarmUpAsync(new HyperLiquidMetadataScope(HyperLiquidNetwork.Testnet));
+        await using var client = sharedStore
+            ? new HyperLiquidClient(ctx.Http, catalog, store, ctx.Options)
+            : new HyperLiquidClient(ctx.Http, ctx.Options);
+
+        var placed = await client.Orders.PlaceLimitAsync("BTC", OrderSide.Buy, 50_000m, 0.001m, TimeInForce.Alo);
+
+        Assert.Equal(14L, placed.OrderId);
+        Assert.DoesNotContain(ctx.Handler.Calls, c => c.ActionType == "approveBuilderFee");
+        Assert.False(Assert.Single(ctx.Handler.Calls, c => c.ActionType == "order").HasField("builder"));
+    }
+
+    private static void AssertBuilderFee(ScriptedHandler.Call order)
+    {
+        using var body = JsonDocument.Parse(order.ActionBody);
+        var builder = body.RootElement.GetProperty("builder");
+        Assert.Equal("0x000000000000000000000000000000000000beef", builder.GetProperty("b").GetString());
+        Assert.Equal(5, builder.GetProperty("f").GetInt32());
     }
 
     // ─── helpers ─────────────────────────────────────────────────────────────

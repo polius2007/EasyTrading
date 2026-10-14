@@ -1,4 +1,12 @@
 - name: Home
   href: index.md
+- name: Getting started
+  href: getting-started.md
+- name: Recipes
+  href: recipes.md
+- name: AI quickstart
+  href: ai-quickstart.md
+- name: AI API map
+  href: ai-api-map.md
 - name: API reference
   href: api/

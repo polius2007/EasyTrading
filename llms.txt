@@ -1,6 +1,6 @@
 # EasyTrading
 
-> A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClient` interface across every supported DEX. HyperLiquid, Aster, and dYdX v4 are all at `1.2.6` on NuGet — REST + WebSocket + signing on each, with pre-flight validation, retry policy, and gap recovery. HyperLiquid + Aster sign EIP-712; dYdX v4 signs Cosmos SDK transactions (BIP-39 → BIP-32 → secp256k1 → bech32 → protobuf TxRaw → REST broadcast), end-to-end verified on testnet. Methods grouped by entity (Markets, Orders, Positions, Trades, Account, Transfers, Streams). `decimal` for money; `IAsyncEnumerable<T>` for streams; typed exceptions.
+> A .NET client for decentralised perpetual and spot exchanges. One `IExchangeClient` interface across every supported DEX. HyperLiquid, Aster, and dYdX v4 are all at `1.2.7` on NuGet — REST + WebSocket + signing on each, with pre-flight validation, retry policy, and gap recovery. HyperLiquid + Aster sign EIP-712; dYdX v4 signs Cosmos SDK transactions (BIP-39 → BIP-32 → secp256k1 → bech32 → protobuf TxRaw → REST broadcast), end-to-end verified on testnet. Methods grouped by entity (Markets, Orders, Positions, Trades, Account, Transfers, Streams). `decimal` for money; `IAsyncEnumerable<T>` for streams; typed exceptions.
 
 ## Ecosystem
 
@@ -9,6 +9,13 @@ EasyTrading is the exchange-connectivity layer of the EasyTrading.pw (https://ea
 - Copytrader (https://copytrader.pw): copy-trading platform — leader accounts mirrored to follower accounts across exchanges through this SDK
 - TradeStat (https://tradestat.pw): trading statistics and performance analytics for exchange accounts
 - XTester (https://xtester.pw): strategy tester — build strategies on top of EasyTrading and backtest them against historical data, or use the tester standalone
+
+## Assistant entry points
+
+- [AI quickstart](https://polius2007.github.io/EasyTrading/ai-quickstart.html): Read-only sample, credentials, automatic and browser fee approval, troubleshooting
+- [AI API map](https://polius2007.github.io/EasyTrading/ai-api-map.html): Map user intents to existing SDK methods and interfaces
+- [Full assistant context](https://polius2007.github.io/EasyTrading/llms-full.txt): Standalone context with examples and transparent builder fee behavior
+- [Compiled read-only sample](https://github.com/polius2007/EasyTrading/tree/main/samples/EasyTrading.Samples.Agent): Testnet public market data without credentials or order placement
 
 ## Documentation
 
@@ -22,9 +29,9 @@ EasyTrading is the exchange-connectivity layer of the EasyTrading.pw (https://ea
 
 ## Packages
 
-- [EasyTrading.HyperLiquid](https://www.nuget.org/packages/EasyTrading.HyperLiquid): HyperLiquid client (REST + WebSocket + EIP-712 signing), stable at 1.2.6
-- [EasyTrading.Aster](https://www.nuget.org/packages/EasyTrading.Aster): Aster Finance perp DEX client (REST + WebSocket + EIP-712 signing), stable at 1.2.6
-- [EasyTrading.Dydx](https://www.nuget.org/packages/EasyTrading.Dydx): dYdX v4 client (Indexer REST + WebSocket + full Cosmos SDK transaction signing: BIP-39 → secp256k1 → bech32 → protobuf TxRaw → REST broadcast), stable at 1.2.6
+- [EasyTrading.HyperLiquid](https://www.nuget.org/packages/EasyTrading.HyperLiquid): HyperLiquid client (REST + WebSocket + EIP-712 signing), stable at 1.2.7
+- [EasyTrading.Aster](https://www.nuget.org/packages/EasyTrading.Aster): Aster Finance perp DEX client (REST + WebSocket + EIP-712 signing), stable at 1.2.7
+- [EasyTrading.Dydx](https://www.nuget.org/packages/EasyTrading.Dydx): dYdX v4 client (Indexer REST + WebSocket + full Cosmos SDK transaction signing: BIP-39 → secp256k1 → bech32 → protobuf TxRaw → REST broadcast), stable at 1.2.7
 - [EasyTrading.Abstractions](https://www.nuget.org/packages/EasyTrading.Abstractions): Cross-DEX interfaces and models (IExchangeClient, IEasyTradingBuilder, all DTOs)
 - [EasyTrading.Core](https://www.nuget.org/packages/EasyTrading.Core): Shared infrastructure (HTTP, WS, retries, signing helpers)
 

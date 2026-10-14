@@ -66,9 +66,9 @@ builder.Services
     {
         options.Network = HyperLiquidNetwork.Mainnet;
         options.Credentials = new HyperLiquidCredentials(
-            masterAddress: "0xYourMasterAddress",
-            privateKey:    "<MASTER_PRIVATE_KEY>",  // one-time use
-            agentName:     "my-bot");
+            MasterAddress: "0xYourMasterAddress",
+            PrivateKey:    "<MASTER_PRIVATE_KEY>",  // one-time use
+            AgentName:     "my-bot");
     });
 
 await ex.Account.ApproveAgentAsync(agentAddress: "0xYourAgentAddress",
@@ -79,9 +79,9 @@ From now on the bot can sign with the **agent key**:
 
 ```csharp
 options.Credentials = new HyperLiquidCredentials(
-    masterAddress: "0xYourMasterAddress",   // the wallet you want to trade for
-    privateKey:    Environment.GetEnvironmentVariable("HL_AGENT_KEY")!,
-    agentName:     "my-bot");
+    MasterAddress: "0xYourMasterAddress",   // the wallet you want to trade for
+    PrivateKey:    Environment.GetEnvironmentVariable("HL_AGENT_KEY")!,
+    AgentName:     "my-bot");
 ```
 
 `masterAddress` is the wallet whose positions and balances the bot trades against; the agent key signs the actions.
@@ -104,9 +104,9 @@ await catalog.WarmUpAsync(scope);
 var factory = app.Services.GetRequiredService<IHyperLiquidClientFactory>();
 await using var accountClient = factory.Create(
     new HyperLiquidCredentials(
-        masterAddress: "0xYourMasterAddress",
-        privateKey: Environment.GetEnvironmentVariable("HL_AGENT_KEY")!,
-        agentName: "my-bot"),
+        MasterAddress: "0xYourMasterAddress",
+        PrivateKey: Environment.GetEnvironmentVariable("HL_AGENT_KEY")!,
+        AgentName: "my-bot"),
     new HyperLiquidClientOptions
     {
         Network = HyperLiquidNetwork.Mainnet,

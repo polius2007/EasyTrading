@@ -5,6 +5,7 @@ using EasyTrading.Abstractions;
 using EasyTrading.Abstractions.Models;
 using EasyTrading.HyperLiquid.Infrastructure;
 using Microsoft.Extensions.Logging;
+using Nethereum.Signer;
 
 namespace EasyTrading.HyperLiquid.Modules;
 
@@ -582,6 +583,11 @@ internal sealed class Orders(
                 checkedAt);
         }
 
+        var approveKey = GetBuilderApprovalKey(user, fee);
+        if (approveKey is null)
+            // Re-check on the next order so a browser approval is picked up immediately.
+            return new HyperLiquidBuilderFeeApprovalState(approvedWireFee, checkedAt);
+
         var nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var maxFeeRatePct = (fee.FeeRate * 100m)
             .ToString("0.######", CultureInfo.InvariantCulture) + "%";
@@ -597,11 +603,6 @@ internal sealed class Orders(
             ("builder", "address"),
             ("nonce", "uint64"),
         };
-
-        var creds = options.Credentials!;
-        var approveKey = !string.IsNullOrEmpty(creds.MasterPrivateKey)
-            ? creds.MasterPrivateKey
-            : creds.PrivateKey;
 
         try
         {
@@ -634,6 +635,37 @@ internal sealed class Orders(
                 BuilderFeeApprovalFailureCooldown.TotalMinutes);
             return RetryState(approvedWireFee, checkedAt);
         }
+    }
+
+    // Only the account owner's key can approve builder fees. AgentName is optional and
+    // does not prove which wallet owns the signing key, so compare derived addresses.
+    private string? GetBuilderApprovalKey(string user, BuilderFee fee)
+    {
+        var creds = options.Credentials!;
+        var key = !string.IsNullOrEmpty(creds.MasterPrivateKey)
+            ? creds.MasterPrivateKey
+            : creds.PrivateKey;
+        try
+        {
+            var signerAddress = new EthECKey(key).GetPublicAddress();
+            if (string.Equals(signerAddress, user, StringComparison.OrdinalIgnoreCase))
+                return key;
+        }
+        catch (Exception ex) when (ex is ArgumentException or FormatException or InvalidOperationException)
+        {
+            // An invalid optional master key must not prevent a valid agent from trading.
+            // Do not log the exception: a key parser may include secret input in its message.
+        }
+
+        logger?.LogWarning(
+            "Builder fee requires approval by the master wallet {Master} for builder {Builder}. "
+            + "The configured signing key is not the master wallet's key. Approve once at "
+            + "https://polius2007.github.io/EasyTrading/approve.html. "
+            + "Orders will be placed without builder routing until approval is in place; "
+            + "the next order will check for the browser approval automatically.",
+            user,
+            fee.BuilderAddress);
+        return null;
     }
 
     private static HyperLiquidBuilderFeeApprovalState RetryState(
@@ -687,6 +719,10 @@ internal sealed class Orders(
         // HyperLiquid requires this action to be signed by the master wallet — if the caller has
         // supplied a separate MasterPrivateKey we use it here; otherwise fall back to the regular
         // PrivateKey (which only succeeds when it IS the master).
+        var approveKey = GetBuilderApprovalKey(user, fee);
+        if (approveKey is null)
+            return false;
+
         var nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var maxFeeRatePct = (fee.FeeRate * 100m).ToString("0.######", CultureInfo.InvariantCulture) + "%";
 
@@ -703,9 +739,6 @@ internal sealed class Orders(
             ("builder",           "address"),
             ("nonce",             "uint64"),
         };
-
-        var creds = options.Credentials!;
-        var approveKey = !string.IsNullOrEmpty(creds.MasterPrivateKey) ? creds.MasterPrivateKey : creds.PrivateKey;
 
         try
         {

@@ -25,9 +25,9 @@ builder.Services
         o.Network = HyperLiquidNetwork.Mainnet;
         o.RetryPolicy = new HyperLiquidRetryOptions { MaxAttempts = 4 };
         // o.Credentials = new HyperLiquidCredentials(
-        //     masterAddress: "0xYourMasterAddress",
-        //     privateKey:    Environment.GetEnvironmentVariable("HL_AGENT_KEY")!,
-        //     agentName:     "easy-bot");
+        //     MasterAddress: "0xYourMasterAddress",
+        //     PrivateKey:    Environment.GetEnvironmentVariable("HL_AGENT_KEY")!,
+        //     AgentName:     "easy-bot");
     })
     .AddAster(o =>
     {

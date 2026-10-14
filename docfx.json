@@ -15,7 +15,8 @@
       { "files": [ "**/*.md", "**/*.yml" ], "src": "docs" }
     ],
     "resource": [
-      { "files": [ "images/**", "approve.html" ], "src": "docs" }
+      { "files": [ "images/**", "approve.html" ], "src": "docs" },
+      { "files": [ "llms.txt", "llms-full.txt" ], "src": "." }
     ],
     "output": "_site",
     "globalMetadata": {
